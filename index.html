@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>마을회관 유사도 게임</title>
-<meta name="description" content="마을회관 유사도 게임: 출제자가 봉투 속 명사 하나를 숨기고, 유사도 95% 이상 힌트로 맞히게 하는 대면 파티 게임">
+<meta name="description" content="마을회관 유사도 게임: 각자 폰으로 참여해, 출제자가 봉투 속 명사 하나를 숨기고 유사도 95% 이상 힌트로 맞히게 하는 파티 게임">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: one stage column (game) + a narrow scoreboard rail; stacks on phones. Single dark "studio" look by choice. */
 :root{
   --bg:#13111b; --panel:#1c1928; --panel2:#242036; --line:#352f4b;
-  --fg:#efebf7; --muted:#a19abb; --brass:#e0ac4f; --cold:#62c6c0; --hot:#ef6a5e; --paper:#e9dcc0; --paperInk:#3a2c14;
+  --fg:#efebf7; --muted:#a19abb; --brass:#e0ac4f; --cold:#62c6c0; --hot:#ef6a5e; --paper:#e9dcc0; --paperInk:#3a2c14; --ok:#7bd88f;
   --display:"Black Han Sans","Noto Sans KR","Apple SD Gothic Neo",sans-serif;
   --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -23,6 +23,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 [hidden]{display:none!important}
 .wrap{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:20px;align-items:start}
+.wrap.solo{grid-template-columns:minmax(0,1fr);max-width:640px}
 @media (max-width:820px){.wrap{grid-template-columns:minmax(0,1fr)}}
 header{max-width:1040px;margin:0 auto 18px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,5vw,40px);margin:0;letter-spacing:.5px;line-height:1}
@@ -37,6 +38,7 @@ p{margin:0 0 12px}
 .eyebrow{font-family:var(--mono);font-size:12px;color:var(--brass);letter-spacing:.08em;margin-bottom:6px}
 form{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}
 input[type=text]{flex:1 1 200px;min-width:0;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;font-size:17px}
+input.code-in{text-transform:uppercase;font-family:var(--mono);letter-spacing:.2em;flex:0 1 140px}
 input:focus-visible,button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 button{font:inherit;font-weight:700;border-radius:10px;padding:12px 18px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--fg)}
 button.go{background:var(--brass);border-color:var(--brass);color:#1b1408}
@@ -45,15 +47,22 @@ button.ghost{background:transparent}
 button.small{padding:6px 10px;font-size:13px;font-weight:500}
 button:disabled{opacity:.5;cursor:not-allowed}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.players{display:grid;gap:8px;margin-top:8px}
-.players .row input{font-size:15px;padding:9px 12px}
-.order{font-family:var(--mono);color:var(--brass);width:26px;text-align:right}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:8px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.card form{margin-top:10px}
+.bigcode{font-family:var(--mono);font-size:clamp(34px,8vw,48px);letter-spacing:.25em;color:var(--brass);font-weight:700;line-height:1.1}
+.invite{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.invite input{font-size:13px;font-family:var(--mono)}
+.list{display:grid;gap:6px;margin-top:8px}
+.list div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;background:var(--panel2)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:8px;vertical-align:1px}
+.dot.off{background:var(--line)}
 .opts label{display:flex;gap:10px;align-items:center}
 .msg{margin-top:12px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--hot) 14%,transparent);border:1px solid color-mix(in srgb,var(--hot) 40%,transparent)}
 .ok{margin-top:12px;padding:12px 14px;border-radius:10px;background:color-mix(in srgb,var(--brass) 14%,transparent);border:1px solid color-mix(in srgb,var(--brass) 45%,transparent)}
 .note{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--panel2);color:var(--muted);font-size:13px}
-.secret{text-align:center;padding:30px 8px}
-.secret .who{font-family:var(--display);font-size:clamp(34px,7vw,52px);color:var(--brass);line-height:1.1;margin:8px 0 10px}
+.wait{padding:22px 4px;text-align:center}
+.wait .who{font-family:var(--display);font-size:clamp(28px,6vw,40px);color:var(--brass);line-height:1.1;margin:6px 0 8px}
 .hints{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .hint{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:700}
 .hint small{font-family:var(--mono);color:var(--brass);margin-right:6px;font-weight:500}
@@ -77,24 +86,27 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:righ
 .board{display:grid;gap:6px}
 .board div{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:9px;background:var(--panel2);align-items:center}
 .board div.setter{outline:1px solid var(--brass)}
+.board div.me{background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
 .board b{font-family:var(--mono);font-size:18px;font-variant-numeric:tabular-nums}
 .board .role{font-size:11px;color:var(--brass);margin-left:6px}
 .delta{color:var(--brass);font-family:var(--mono);font-size:13px}
 .rules{font-size:13px}
 .rules td:last-child{font-family:var(--mono);text-align:right;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.chip.done{color:var(--fg);border-color:var(--ok)}
 /* envelopes */
 .envs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;margin-top:12px}
-.env{position:relative;aspect-ratio:4/3;max-width:100%;border-radius:8px;background:var(--paper);color:var(--paperInk);border:none;padding:0;overflow:hidden;font-family:var(--display);font-size:26px;font-weight:400;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10%}
+.env{position:relative;aspect-ratio:4/3;max-width:100%;border-radius:8px;background:var(--paper);color:var(--paperInk);border:none;padding:0;overflow:hidden;font-family:var(--display);font-size:26px;font-weight:400;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10%;transition:transform .15s}
 .env::before{content:"";position:absolute;inset:0 0 auto 0;height:58%;background:color-mix(in srgb,var(--paper) 82%,#000);clip-path:polygon(0 0,100% 0,50% 100%)}
 .env::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-14px 0 0 -10px;border-radius:50%;background:var(--hot)}
 .env span{position:relative;z-index:1}
 .env:hover:not(:disabled){transform:translateY(-3px)}
-.env:disabled{opacity:.28}
-.env:disabled::after{display:none}
-.env{transition:transform .15s}
+.env:disabled{cursor:default}
+.env.used{opacity:.28}
+.env.used::after{display:none}
 .words{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px}
 .words button{font-family:var(--display);font-weight:400;font-size:24px;padding:18px 10px;background:var(--paper);color:var(--paperInk);border:none}
-.words button:hover{filter:brightness(1.05)}
 .load{margin-top:14px;font-size:13px;color:var(--muted)}
 .load .bar{height:6px;border-radius:3px;background:var(--bg);overflow:hidden;margin-top:6px}
 .load .bar i{display:block;height:100%;background:var(--cold);width:0;transition:width .2s}
@@ -109,14 +121,15 @@ footer{max-width:1040px;margin:20px auto 0;color:var(--muted);font-size:12px}
   <h1>마을회관 <b>유사도</b> 게임</h1>
   <span class="tag">출제자는 95% 힌트로 버티고, 나머지는 히든 워드를 정확히 맞힌다</span>
 </header>
-<div class="wrap">
+<div class="wrap" id="wrap">
   <main class="stage" id="stage"></main>
   <aside class="rail" id="rail"></aside>
 </div>
-<footer>유사도는 브라우저 안에서 다국어 의미 모델로 계산해요. 처음 한 번 모델(약 120MB)을 받고 나면 이후엔 바로 켜져요. 단어는 서버로 보내지 않아요.</footer>
+<footer>각자 폰으로 접속해 참여해요. 방장 기기가 게임을 진행하고 유사도를 계산하니 방장은 창을 닫지 마세요. 유사도 모델(약 120MB)은 방장 기기에서 처음 한 번만 받아요.</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
-/* ---------- similarity engine (in-browser) ---------- */
+/* ================= similarity engine (host only) ================= */
 const MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
 const engine = {ready:false, failed:false, pct:0, extractor:null, promise:null};
 const embCache = new Map();
@@ -132,12 +145,18 @@ function loadEngine(){
       progress_callback: p => {
         if (p.status === 'progress' && p.total){ files[p.file] = [p.loaded, p.total];
           let a = 0, b = 0; for (const [l, t] of Object.values(files)){ a += l; b += t; }
-          engine.pct = Math.round(a / b * 100); paintLoad(); }
+          const pct = Math.round(a / b * 100); if (pct !== engine.pct){ engine.pct = pct; enginePing(); } }
       }
     });
-    engine.ready = true; engine.pct = 100; paintLoad();
-  })().catch(e => { console.error(e); engine.failed = true; engine.promise = null; paintLoad(); throw e; });
+    engine.ready = true; engine.pct = 100; enginePing(true);
+  })().catch(e => { console.error(e); engine.failed = true; engine.promise = null; enginePing(true); throw e; });
   return engine.promise;
+}
+let pingTimer = null;
+function enginePing(now){
+  if (mode !== 'host') return;
+  if (now){ clearTimeout(pingTimer); pingTimer = null; return push(); }
+  if (!pingTimer) pingTimer = setTimeout(() => { pingTimer = null; push(); }, 700);
 }
 async function embed(w){
   const k = w.trim();
@@ -147,7 +166,7 @@ async function embed(w){
   embCache.set(k, v);
   return v;
 }
-/* raw cosine → game %. Calibrated on Korean noun pairs: 0.75 raw (기차-철도, 치킨-닭, 선생님-학생 급) = 95%. */
+/* raw cosine → game %. Calibrated on Korean noun pairs: 0.75 raw (기차-철도, 치킨-닭, 커피-카페 급) = 95%. */
 const CUT = 0.75;
 function toPct(raw){
   if (raw >= 0.999) return 100;
@@ -161,37 +180,67 @@ async function similarity(a, b){
   return toPct(s);
 }
 
-/* ---------- noun bank for envelopes ---------- */
-const NOUNS = [...new Set(`기차 냉장고 피아노 눈사람 도서관 치킨 비행기 선생님 시계 우산 바다 학교 병원 고양이 강아지 사과 휴대폰 자동차 자전거 축구 야구 수영장 놀이공원 생일 케이크 커피 라면 김치 떡볶이 피자 햄버거 아이스크림 초콜릿 우유 빵 김밥 소주 맥주 경찰 소방관 의사 요리사 가수 배우 군인 농부 어부 대통령 할머니 아기 친구 결혼식 크리스마스 설날 추석 여름 겨울 태풍 무지개 번개 달 태양 별 지구 우주 화산 사막 정글 산 강 섬 호수 폭포 동굴 나무 꽃 장미 해바라기 호랑이 사자 코끼리 기린 원숭이 펭귄 돌고래 상어 고래 거북이 토끼 돼지 개구리 나비 모기 거미 공룡 로봇 컴퓨터 텔레비전 카메라 안경 신발 모자 가방 지갑 반지 침대 의자 책상 소파 냉면 칫솔 비누 수건 열쇠 연필 지우개 공책 가위 풍선 선물 편지 신문 영화 음악 노래 그림 사진 게임 시험 숙제 월급 은행 시장 백화점 편의점 카페 식당 호텔 공항 지하철 택시 버스 경찰서 감옥 교회 왕 공주 마법사 유령 천사 전쟁 올림픽 월드컵 마라톤 헬스장 낚시 캠핑 여행 여권 지도 나침반 등산 스키 썰매 구름 안개 소나기 눈썰매장 군대 대학교 회사 사장님 택배 엘리베이터 계단 창문 냉장고 전자레인지 세탁기 에어컨 선풍기 이불 베개 치약 화장실 목욕탕 찜질방 노래방 피시방 만화책 소설 일기 달력 생선 고기 계란 두부 된장 고추장 젓가락 숟가락 냄비 프라이팬`.split(/\s+/))];
+/* ================= noun bank ================= */
+const NOUNS = [...new Set(`기차 냉장고 피아노 눈사람 도서관 치킨 비행기 선생님 시계 우산 바다 학교 병원 고양이 강아지 사과 휴대폰 자동차 자전거 축구 야구 수영장 놀이공원 생일 케이크 커피 라면 김치 떡볶이 피자 햄버거 아이스크림 초콜릿 우유 빵 김밥 소주 맥주 경찰 소방관 의사 요리사 가수 배우 군인 농부 어부 대통령 할머니 아기 친구 결혼식 크리스마스 설날 추석 여름 겨울 태풍 무지개 번개 달 태양 별 지구 우주 화산 사막 정글 산 강 섬 호수 폭포 동굴 나무 꽃 장미 해바라기 호랑이 사자 코끼리 기린 원숭이 펭귄 돌고래 상어 고래 거북이 토끼 돼지 개구리 나비 모기 거미 공룡 로봇 컴퓨터 텔레비전 카메라 안경 신발 모자 가방 지갑 반지 침대 의자 책상 소파 냉면 칫솔 비누 수건 열쇠 연필 지우개 공책 가위 풍선 선물 편지 신문 영화 음악 노래 그림 사진 게임 시험 숙제 월급 은행 시장 백화점 편의점 카페 식당 호텔 공항 지하철 택시 버스 경찰서 감옥 교회 왕 공주 마법사 유령 천사 전쟁 올림픽 월드컵 마라톤 헬스장 낚시 캠핑 여행 여권 지도 나침반 등산 스키 썰매 구름 안개 소나기 눈썰매장 군대 대학교 회사 사장님 택배 엘리베이터 계단 창문 전자레인지 세탁기 에어컨 선풍기 이불 베개 치약 화장실 목욕탕 찜질방 노래방 피시방 만화책 소설 일기 달력 생선 고기 계란 두부 된장 고추장 젓가락 숟가락 냄비 프라이팬`.split(/\s+/))];
 
-/* ---------- state ---------- */
-const KEY = 'sim95-v2';
+/* ================= common ================= */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s || '').trim().replace(/\s+/g, '').toLowerCase();
-const THR = 95;
-
-function fresh(names){
-  return {phase:'setup', players:(names || [1,2,3,4].map(i => '플레이어 ' + i)).map(n => ({name:n, score:0})),
-    shuffle:true, order:[], round:0, envelopes:[], envIdx:-1, hidden:'', stage:1, hints:[], attempts:[],
-    passHint:null, guesses:[], pending:[], cursor:0, msg:'', result:null, deltas:{}};
-}
-let S;
-try { S = JSON.parse(localStorage.getItem(KEY)) || null; } catch(e) { S = null; }
-if (!S || !S.phase) S = fresh();
-if (S.phase === 'judging') S.phase = 'judge-retry';
-let busy = false;
-
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
-const n = () => S.players.length;
-const setterIdx = () => S.order[S.round];
-const guessers = () => S.order.filter(i => i !== setterIdx());
+const THR = 95, MAXP = 10, PREFIX = 'maeul-sim95-';
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+const CID = (() => {
+  let c = null;
+  try { c = sessionStorage.getItem('sim95-cid'); } catch(e){}
+  if (!c){ c = Math.random().toString(36).slice(2, 12); try { sessionStorage.setItem('sim95-cid', c); } catch(e){} }
+  return c;
+})();
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const $ = id => document.getElementById(id);
 
-/* ---------- flow ---------- */
+let mode = null;          // null | 'host' | 'guest'
+let room = null, peer = null, hostConn = null, conns = {}, retryTimer = null, hostTries = 0;
+let V = null;             // the view this device renders
+let netStatus = '', entryMsg = '';
+let editingGuess = false;
+
+/* ================= host: game state ================= */
+let S = null;
+function freshRoom(code, hostName){
+  return {code, phase:'lobby', players:[{cid:CID, name:hostName, score:0}], shuffle:true, order:[], round:0,
+    envelopes:[], envIdx:-1, hidden:'', stage:1, hints:[], attempts:[], passHint:null, hintBusy:false,
+    guesses:[], pending:{}, result:null, deltas:{}, msgs:{}};
+}
+const saveRoom = () => { if (S) store.set('sim95-room-' + S.code, S); };
+const setterOf = () => (S.phase === 'lobby' || S.phase === 'final') ? -1 : S.order[S.round];
+const guessers = () => S.order.filter(i => i !== setterOf());
+const online = i => i === 0 || !!(conns[S.players[i].cid] && conns[S.players[i].cid].open);
+
+function viewFor(pid){
+  const setter = setterOf();
+  const isSetter = pid === setter;
+  const end = S.phase === 'round-end';
+  return {me:pid, isHost:pid === 0, code:S.code, phase:S.phase, shuffle:S.shuffle,
+    players:S.players.map((p, i) => ({name:p.name, score:p.score, online:online(i)})),
+    order:S.order, round:S.round, setter, envelopes:S.envelopes.map(e => ({used:e.used})), envIdx:S.envIdx,
+    stage:S.stage, hints:S.hints, guesses:S.guesses, submitted:Object.keys(S.pending).map(Number),
+    tries:S.attempts.length, hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
+    engine:{ready:engine.ready, pct:engine.pct, failed:engine.failed},
+    myGuess:S.pending[pid] ?? null,
+    secret:isSetter && !end ? {hidden:S.hidden, words:S.envIdx >= 0 ? S.envelopes[S.envIdx].words : null, attempts:S.attempts, passHint:S.passHint} : null,
+    reveal:end ? {hidden:S.hidden, words:(S.envelopes[S.envIdx] || {}).words || []} : null};
+}
+function push(){
+  if (mode !== 'host' || !S) return;
+  saveRoom();
+  S.players.forEach((p, i) => { if (i === 0) return; const c = conns[p.cid]; if (c && c.open) sendTo(c, {t:'view', v:viewFor(i)}); });
+  V = viewFor(0); render();
+}
 function startGame(){
-  S.players = S.players.filter(p => p.name.trim()).map(p => ({name:p.name.trim(), score:0}));
-  if (S.players.length < 3){ S.msg = '최소 3명이 필요해요 (출제자 1명 + 맞히는 사람 2명 이상).'; return render(); }
-  if (S.players.length * 5 > NOUNS.length){ S.msg = '플레이어가 너무 많아요.'; return render(); }
+  if (S.players.length < 3){ S.msgs[0] = '최소 3명이 필요해요 (출제자 1명 + 맞히는 사람 2명 이상).'; return; }
+  S.players.forEach(p => p.score = 0);
   S.order = S.players.map((_, i) => i);
   if (S.shuffle) shuffle(S.order);
   const pool = shuffle([...NOUNS]);
@@ -200,58 +249,33 @@ function startGame(){
   beginRound();
 }
 function beginRound(){
-  Object.assign(S, {phase:'env-handoff', envIdx:-1, hidden:'', stage:1, hints:[], attempts:[], passHint:null,
-    guesses:[], pending:[], cursor:0, msg:'', result:null, deltas:{}});
-  render();
+  Object.assign(S, {phase:'env-pick', envIdx:-1, hidden:'', stage:1, hints:[], attempts:[], passHint:null, hintBusy:false,
+    guesses:[], pending:{}, result:null, deltas:{}, msgs:{}});
 }
-function pickEnvelope(i){
-  if (S.envelopes[i].used) return;
-  S.envIdx = i; S.phase = 'env-open'; render();
-}
-function pickWord(w){
-  S.hidden = w; S.envelopes[S.envIdx].used = true;
-  S.phase = 'hint'; S.attempts = []; S.passHint = null; S.msg = '';
-  render();
-}
-async function tryHint(h){
-  h = h.trim();
-  if (!h){ S.msg = '힌트 단어를 입력해 주세요.'; return render(); }
+async function tryHint(pid, h){
+  h = h.trim().slice(0, 30);
   const a = norm(h), b = norm(S.hidden);
-  if (a === b || a.includes(b)){ S.msg = '정답 단어와 같거나 정답이 들어간 힌트는 쓸 수 없어요.'; return render(); }
-  if (S.hints.some(x => norm(x.text) === a)){ S.msg = '이미 공개한 힌트예요.'; return render(); }
-  busy = true; S.msg = ''; render();
+  if (!a){ S.msgs[pid] = '힌트 단어를 입력해 주세요.'; return push(); }
+  if (a === b || a.includes(b)){ S.msgs[pid] = '정답 단어와 같거나 정답이 들어간 힌트는 쓸 수 없어요.'; return push(); }
+  if (S.hints.some(x => norm(x.text) === a)){ S.msgs[pid] = '이미 공개한 힌트예요.'; return push(); }
+  S.hintBusy = true; push();
   try {
     const sc = await similarity(S.hidden, h);
     S.attempts.unshift({text:h, score:sc});
     if (sc >= THR) S.passHint = {text:h, score:sc};
-  } catch(e){ S.msg = '유사도 모델을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.'; }
-  busy = false; render();
-}
-function publishHint(){
-  S.hints.push({...S.passHint, stage:S.stage});
-  S.passHint = null; S.attempts = [];
-  S.pending = []; S.cursor = 0; S.phase = 'hint-public'; render();
-}
-function giveUp(){
-  S.result = {type:'giveup', stage:S.stage}; S.phase = 'round-end'; render();
-}
-function submitGuess(w){
-  w = w.trim();
-  if (!w){ S.msg = '단어를 입력해 주세요.'; return render(); }
-  S.pending.push({player:guessers()[S.cursor], word:w});
-  S.cursor++; S.msg = '';
-  if (S.cursor < guessers().length){ S.phase = 'guess-handoff'; render(); }
-  else judge();
+  } catch(e){ S.msgs[pid] = '방장 기기에서 유사도 모델을 불러오지 못했어요. 방장의 인터넷 연결을 확인해 주세요.'; }
+  S.hintBusy = false; push();
 }
 async function judge(){
-  S.phase = 'judging'; S.msg = ''; render();
+  S.phase = 'judging'; push();
   const list = [];
-  for (const g of S.pending){
-    let sc = norm(g.word) === norm(S.hidden) ? 100 : null;
-    if (sc === null){ try { sc = await similarity(S.hidden, g.word); } catch(e){ sc = 0; } }
-    list.push({...g, stage:S.stage, score:sc, correct:norm(g.word) === norm(S.hidden)});
+  for (const [k, w] of Object.entries(S.pending)){
+    const pid = +k, correct = norm(w) === norm(S.hidden);
+    let sc = 100;
+    if (!correct){ try { sc = await similarity(S.hidden, w); } catch(e){ sc = 0; } }
+    list.push({player:pid, word:w, stage:S.stage, score:sc, correct});
   }
-  S.guesses.push(...list); S.pending = [];
+  S.guesses.push(...list); S.pending = {};
   const pts = S.stage;
   const winners = [...new Set(list.filter(g => g.correct).map(g => g.player))];
   if (winners.length){
@@ -259,21 +283,164 @@ async function judge(){
     S.result = {type:'hit', winners, stage:S.stage, pts};
     S.phase = 'round-end';
   } else {
-    const s = setterIdx();
+    const s = setterOf();
     S.players[s].score += pts; S.deltas[s] = (S.deltas[s] || 0) + pts;
     if (S.stage < 3){ S.result = {type:'stage-miss', stage:S.stage, pts}; S.phase = 'stage-result'; }
     else { S.result = {type:'miss', stage:3}; S.phase = 'round-end'; }
   }
-  render();
+  push();
 }
-function nextStage(){ S.stage++; S.phase = 'hint-handoff'; S.result = null; render(); }
-function nextRound(){
-  S.round++;
-  if (S.round >= n()){ S.phase = 'final'; render(); }
-  else beginRound();
+function handle(pid, a){
+  if (!S || !a) return;
+  S.msgs[pid] = '';
+  const setter = setterOf();
+  switch (a.a){
+    case 'start': if (pid === 0 && S.phase === 'lobby') startGame(); break;
+    case 'shuffle': if (pid === 0 && S.phase === 'lobby') S.shuffle = !!a.v; break;
+    case 'kick':
+      if (pid === 0 && S.phase === 'lobby' && a.i > 0 && S.players[a.i]){
+        const p = S.players.splice(a.i, 1)[0]; const c = conns[p.cid];
+        if (c){ sendTo(c, {t:'reject', reason:'방장이 방에서 내보냈어요.'}); setTimeout(() => { try { c.close(); } catch(e){} }, 300); delete conns[p.cid]; }
+      } break;
+    case 'env': if (S.phase === 'env-pick' && pid === setter && S.envelopes[a.i] && !S.envelopes[a.i].used){ S.envIdx = +a.i; S.phase = 'env-open'; } break;
+    case 'word':
+      if (S.phase === 'env-open' && pid === setter && S.envelopes[S.envIdx].words.includes(a.w)){
+        S.hidden = a.w; S.envelopes[S.envIdx].used = true; S.phase = 'hint'; S.attempts = []; S.passHint = null;
+      } break;
+    case 'hint': if (S.phase === 'hint' && pid === setter && !S.hintBusy && !S.passHint) return tryHint(pid, String(a.text || '')); break;
+    case 'publish':
+      if (S.phase === 'hint' && pid === setter && S.passHint){
+        S.hints.push({...S.passHint, stage:S.stage}); S.passHint = null; S.attempts = []; S.pending = {}; S.phase = 'guess';
+      } break;
+    case 'discard': if (S.phase === 'hint' && pid === setter) S.passHint = null; break;
+    case 'giveup': if (S.phase === 'hint' && pid === setter && S.attempts.length >= 8){ S.result = {type:'giveup', stage:S.stage}; S.phase = 'round-end'; } break;
+    case 'guess':
+      if (S.phase === 'guess' && pid !== setter && S.order.includes(pid)){
+        const w = String(a.w || '').trim().slice(0, 20);
+        if (!w){ S.msgs[pid] = '단어를 입력해 주세요.'; break; }
+        S.pending[pid] = w;
+        if (guessers().every(g => g in S.pending)) return judge();
+      } break;
+    case 'force': if (pid === 0 && S.phase === 'guess' && Object.keys(S.pending).length) return judge(); break;
+    case 'next':
+      if (pid !== 0) break;
+      if (S.phase === 'stage-result'){ S.stage++; S.phase = 'hint'; S.result = null; S.attempts = []; S.passHint = null; }
+      else if (S.phase === 'round-end'){ S.round++; if (S.round >= S.players.length) S.phase = 'final'; else beginRound(); }
+      break;
+    case 'again': if (pid === 0 && S.phase === 'final') startGame(); break;
+    case 'lobby': if (pid === 0){ beginRound(); S.phase = 'lobby'; S.players.forEach(p => p.score = 0); } break;
+  }
+  push();
 }
 
-/* ---------- views ---------- */
+/* ================= networking (PeerJS, host relays, no accounts) ================= */
+function sendTo(c, msg){ if (c && c.open){ try { c.send(msg); } catch(e){} } }
+const inviteUrl = code => location.origin + location.pathname + '?room=' + code;
+function setUrl(q){ try { history.replaceState(null, '', location.pathname + q); } catch(e){} }
+function newCode(){ const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; }
+
+function hostWire(c){
+  let cid = null;
+  c.on('data', msg => {
+    if (!msg || !S) return;
+    if (msg.t === 'hello'){
+      cid = String(msg.cid || '').slice(0, 40);
+      let name = String(msg.name || '').trim().slice(0, 12) || '이름없음';
+      let i = S.players.findIndex(p => p.cid === cid);
+      if (i < 0 && S.phase !== 'lobby'){
+        // rejoin from a new tab: take over an offline seat with the same name
+        const j = S.players.findIndex((p, k) => k > 0 && p.name === name && !online(k));
+        if (j > 0){ S.players[j].cid = cid; i = j; }
+      }
+      if (i < 0){
+        if (S.phase !== 'lobby'){ sendTo(c, {t:'reject', reason:'이미 시작된 게임이에요. 방장이 로비로 돌아오면 참여할 수 있어요.'}); setTimeout(() => c.close(), 400); return; }
+        if (S.players.length >= MAXP){ sendTo(c, {t:'reject', reason:'방이 꽉 찼어요 (최대 ' + MAXP + '명).'}); setTimeout(() => c.close(), 400); return; }
+        let base = name, k = 2; while (S.players.some(p => p.name === name)) name = base + k++;
+        S.players.push({cid, name, score:0});
+      } else if (S.phase === 'lobby' && S.players[i].name !== name && !S.players.some(p => p.name === name)) S.players[i].name = name;
+      if (conns[cid] && conns[cid] !== c){ try { conns[cid].close(); } catch(e){} }
+      conns[cid] = c; push();
+    } else if (msg.t === 'act' && cid){
+      const i = S.players.findIndex(p => p.cid === cid);
+      if (i > 0) handle(i, msg);
+    }
+  });
+  c.on('close', () => { if (cid && conns[cid] === c){ delete conns[cid]; push(); } });
+  c.on('error', () => {});
+}
+function startHost(code, name, existing){
+  cleanupNet();
+  mode = 'host'; room = code;
+  S = existing || store.get('sim95-room-' + code) || freshRoom(code, name);
+  S.players[0].cid = CID; S.hintBusy = false;
+  if (S.phase === 'judging') S.phase = 'guess';
+  setUrl('?host=' + code);
+  netStatus = '방을 여는 중…';
+  push();
+  loadEngine().catch(() => {});
+  if (!window.Peer){ netStatus = '연결 도구를 불러오지 못했어요. 인터넷을 확인하고 새로고침해 주세요.'; return render(); }
+  peer = new Peer(PREFIX + code);
+  peer.on('open', () => { hostTries = 0; netStatus = ''; render(); });
+  peer.on('connection', c => hostWire(c));
+  peer.on('disconnected', () => { try { peer.reconnect(); } catch(e){} });
+  peer.on('error', err => {
+    if (err.type === 'unavailable-id'){
+      if (++hostTries <= 6){ const p = peer; netStatus = '방을 다시 여는 중…'; render(); setTimeout(() => { if (peer === p && mode === 'host'){ try { p.destroy(); } catch(e){} startHost(code, name, S); } }, 3000); }
+      else { netStatus = '이 방 코드를 다른 창에서 쓰고 있어요. 그 창을 닫거나 새 방을 만들어 주세요.'; render(); }
+    } else if (['network', 'server-error', 'socket-error'].includes(err.type)){ netStatus = '연결 서버에 닿지 못했어요. 인터넷을 확인하고 새로고침해 주세요.'; render(); }
+  });
+}
+function startGuest(code, name){
+  cleanupNet();
+  mode = 'guest'; room = code; V = null;
+  store.set('sim95-name', name);
+  window.__guestName = name;
+  setUrl('?room=' + code);
+  netStatus = '방 ' + code + '에 연결하는 중…';
+  render();
+  if (!window.Peer){ netStatus = '연결 도구를 불러오지 못했어요. 인터넷을 확인하고 새로고침해 주세요.'; return render(); }
+  peer = new Peer();
+  peer.on('open', () => connectGuest());
+  peer.on('disconnected', () => { try { peer.reconnect(); } catch(e){} });
+  peer.on('error', err => {
+    if (err.type === 'peer-unavailable'){ netStatus = '방 ' + code + '을 찾지 못했어요. 코드가 맞는지, 방장이 창을 열어 두었는지 확인해 주세요. 다시 시도하는 중…'; render(); scheduleGuestRetry(); }
+    else if (['network', 'server-error', 'socket-error'].includes(err.type)){ netStatus = '연결 서버에 닿지 못했어요. 인터넷을 확인해 주세요. 다시 시도하는 중…'; render(); scheduleGuestRetry(); }
+  });
+}
+function connectGuest(){
+  if (mode !== 'guest' || !peer || peer.destroyed) return;
+  if (hostConn){ try { hostConn.close(); } catch(e){} }
+  const c = peer.connect(PREFIX + room, {reliable:true}); hostConn = c;
+  c.on('open', () => { clearTimeout(retryTimer); netStatus = ''; sendTo(c, {t:'hello', cid:CID, name:window.__guestName}); render(); });
+  c.on('data', msg => {
+    if (!msg) return;
+    if (msg.t === 'view'){ V = msg.v; netStatus = ''; render(); }
+    else if (msg.t === 'reject'){ cleanupNet(); mode = null; V = null; entryMsg = msg.reason; setUrl(''); render(); }
+  });
+  c.on('close', () => { if (hostConn === c && mode === 'guest'){ netStatus = '방장과 연결이 끊겼어요. 다시 연결하는 중…'; render(); scheduleGuestRetry(); } });
+  c.on('error', () => {});
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => { if (mode === 'guest' && !(hostConn && hostConn.open)) scheduleGuestRetry(); }, 8000);
+}
+function scheduleGuestRetry(){
+  if (mode !== 'guest') return;
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(connectGuest, 3000);
+}
+function cleanupNet(){
+  clearTimeout(retryTimer);
+  if (hostConn){ try { hostConn.close(); } catch(e){} hostConn = null; }
+  for (const k in conns){ try { conns[k].close(); } catch(e){} } conns = {};
+  if (peer){ try { peer.destroy(); } catch(e){} peer = null; }
+}
+function act(a){
+  if (mode === 'host') handle(0, a);
+  else if (mode === 'guest') sendTo(hostConn, {t:'act', ...a});
+}
+
+/* ================= views ================= */
+const nm = i => V.players[i] ? V.players[i].name : '';
+const isSetter = () => V.me === V.setter;
 function rulesTable(){
   return `<table class="rules">
   <tr><td>1차 힌트에서 정답 → 맞힌 사람마다</td><td>+1</td></tr>
@@ -292,217 +459,261 @@ function guessTable(list){
   if (!list.length) return '';
   const rows = [...list].sort((a, b) => b.score - a.score).map(g =>
     `<tr><td>${esc(g.word)}${g.correct ? '<span class="badge">정답</span>' : ''}</td>
-      <td class="muted" style="white-space:nowrap">${esc(S.players[g.player].name)} · ${g.stage}차</td>
+      <td class="muted" style="white-space:nowrap">${esc(nm(g.player))} · ${g.stage}차</td>
       <td style="width:36%">${meter(g.score)}</td><td class="num">${g.score}%</td></tr>`).join('');
   return `<div class="tablebox"><table><tr><th>추측 단어</th><th>누가</th><th>정답과 유사도</th><th></th></tr>${rows}</table></div>`;
 }
 function hintChips(){
-  if (!S.hints.length) return '';
-  return `<h3>공개된 힌트</h3><div class="hints">${S.hints.map(h => `<span class="hint"><small>${h.stage}차 · ${h.score}%</small>${esc(h.text)}</span>`).join('')}</div>`;
+  if (!V.hints.length) return '';
+  return `<h3>공개된 힌트</h3><div class="hints">${V.hints.map(h => `<span class="hint"><small>${h.stage}차 · ${h.score}%</small>${esc(h.text)}</span>`).join('')}</div>`;
 }
 function steps(){
   let html = '<div class="steps" aria-label="힌트 단계">';
   for (let i = 1; i <= 3; i++){
-    const g = S.guesses.filter(x => x.stage === i);
+    const g = V.guesses.filter(x => x.stage === i);
     let c = '';
     if (g.length) c = g.some(x => x.correct) ? 'hit' : 'miss';
-    else if (i === S.stage) c = 'on';
+    else if (i === V.stage) c = 'on';
     html += `<span class="${c}"></span>`;
   }
   return html + '</div>';
 }
-const roundHead = () => `<div class="eyebrow">라운드 ${S.round + 1} / ${n()} · 출제자 ${esc(S.players[setterIdx()].name)}</div>`;
-const msgBox = () => S.msg ? `<div class="msg">${esc(S.msg)}</div>` : '';
+const roundHead = () => `<div class="eyebrow">라운드 ${V.round + 1} / ${V.players.length} · 출제자 ${esc(nm(V.setter))}${isSetter() ? ' (나)' : ''}</div>`;
+const msgBox = () => V.msg ? `<div class="msg">${esc(V.msg)}</div>` : '';
+const hostOnlyNext = label => V.isHost
+  ? `<form data-form="noop"><button class="go" type="submit" data-act="next">${label}</button></form>`
+  : `<p class="muted" style="margin-top:14px">방장이 다음으로 넘기면 진행돼요.</p>`;
 function loadBox(){
-  if (engine.ready) return '<div class="load" id="loadBox">유사도 모델 준비 완료</div>';
-  if (engine.failed) return `<div class="load" id="loadBox">유사도 모델을 불러오지 못했어요. <button class="small" data-act="reload">다시 불러오기</button></div>`;
-  return `<div class="load" id="loadBox">유사도 모델 불러오는 중 ${engine.pct}%<div class="bar"><i style="width:${engine.pct}%"></i></div></div>`;
+  const e = V.engine;
+  if (e.ready) return '<div class="load">유사도 모델 준비 완료</div>';
+  if (e.failed) return `<div class="load">방장 기기에서 유사도 모델을 불러오지 못했어요.${V.isHost ? ' <button class="small" data-act="reloadEngine">다시 불러오기</button>' : ''}</div>`;
+  return `<div class="load">${V.isHost ? '' : '방장 기기에서 '}유사도 모델 불러오는 중 ${e.pct}%<div class="bar"><i style="width:${e.pct}%"></i></div></div>`;
 }
-function paintLoad(){ const el = document.getElementById('loadBox'); if (el) el.outerHTML = loadBox(); }
+function waitBox(who, what){ return `<div class="wait"><div class="who">${esc(who)}</div><p class="muted"><span class="spinner"></span>${what}</p></div>`; }
 
-function viewSetup(){
-  const rows = S.players.map((p, i) => `<div class="row"><span class="order">${i + 1}</span>
-    <input type="text" id="pn${i}" data-i="${i}" value="${esc(p.name)}" maxlength="12" aria-label="플레이어 ${i + 1} 이름">
-    <button class="small ghost" data-act="rm" data-i="${i}" ${S.players.length <= 3 ? 'disabled' : ''}>삭제</button></div>`).join('');
-  return `<h2>게임 준비</h2>
-  <p class="muted">한 화면을 돌려 가며 하는 대면 게임이에요. 봉투는 플레이어 수만큼 있고, 봉투마다 명사 5개가 들어 있어요. 출제자는 봉투 하나를 열어 그중 하나를 히든 워드로 골라요.</p>
-  <h3>플레이어 (${S.players.length}명 · 봉투 ${S.players.length}개)</h3>
-  <div class="players">${rows}</div>
-  <div class="row" style="margin-top:10px"><button class="small" data-act="add" ${S.players.length >= 10 ? 'disabled' : ''}>+ 플레이어 추가</button></div>
-  <h3>설정</h3>
-  <div class="opts"><label><input type="checkbox" id="optShuffle" ${S.shuffle ? 'checked' : ''}> 출제 순서 무작위로 섞기 (끄면 위 순서대로)</label></div>
-  <h3>점수표</h3>${rulesTable()}
-  ${msgBox()}
-  <form data-form="start"><button class="go" type="submit">게임 시작</button></form>
+function viewEntry(){
+  const q = new URLSearchParams(location.search);
+  const code = (q.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  const saved = esc(store.get('sim95-name') || '');
+  const err = entryMsg ? `<div class="msg">${esc(entryMsg)}</div>` : '';
+  if (code) return `<h2>방 ${esc(code)}에 참여</h2>
+    <p class="muted">게임에서 쓸 이름을 적고 참여를 누르세요.</p>
+    <form data-form="join"><input type="hidden" id="joinCode" value="${esc(code)}">
+    <input type="text" id="joinName" maxlength="12" placeholder="내 이름" value="${saved}" autocomplete="nickname">
+    <button class="go" type="submit">참여</button></form>${err}
+    <p class="muted" style="margin-top:16px;font-size:13px">방을 직접 만들고 싶다면 <button class="small ghost" data-act="toMain">처음 화면으로</button></p>`;
+  return `<h2>시작하기</h2>
+  <p class="muted">한 명이 방을 만들고, 나머지는 각자 폰으로 초대 링크나 방 코드로 들어와 참여를 눌러요.</p>
+  <div class="cards">
+    <div class="card"><h3 style="margin-top:0">방 만들기 (방장)</h3>
+      <p class="muted" style="font-size:13px">방장 기기가 게임을 진행해요. 게임이 끝날 때까지 창을 닫지 마세요.</p>
+      <form data-form="host"><input type="text" id="hostName" maxlength="12" placeholder="내 이름" value="${saved}" autocomplete="nickname">
+      <button class="go" type="submit">방 만들기</button></form></div>
+    <div class="card"><h3 style="margin-top:0">참여하기</h3>
+      <p class="muted" style="font-size:13px">방장에게 받은 4글자 코드를 넣으세요.</p>
+      <form data-form="joinMain"><input type="text" id="mainCode" class="code-in" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <input type="text" id="mainName" maxlength="12" placeholder="내 이름" value="${saved}" autocomplete="nickname">
+      <button class="go" type="submit">참여</button></form></div>
+  </div>${err}
+  <h3>진행 방식</h3>
+  <p style="font-size:14px">① 봉투는 플레이어 수만큼, 봉투마다 명사 5개. 출제자가 봉투 하나를 열어 하나를 히든 워드로 골라요.<br>② 출제자는 히든 워드와 유사도 ${THR}% 이상인 힌트가 나올 때까지 후보를 넣어 봐요. 통과한 힌트만 공개돼요.<br>③ 나머지는 각자 폰에 히든 워드를 적어요. 정확히 같아야 정답.<br>④ 아무도 못 맞히면 출제자가 점수를 받고 다음 힌트로 (최대 3차).</p>
+  <h3>점수표</h3>${rulesTable()}`;
+}
+function viewConnecting(){
+  return `<h2><span class="spinner"></span>연결 중</h2><p class="muted">${esc(netStatus)}</p>
+  <form data-form="noop"><button type="submit" data-act="leave" class="ghost">그만두기</button></form>`;
+}
+function viewLobby(){
+  const list = V.players.map((p, i) => `<div><span><span class="dot ${p.online ? '' : 'off'}"></span>${esc(p.name)}${i === 0 ? ' <span class="muted" style="font-size:12px">방장</span>' : ''}${i === V.me ? ' <span class="muted" style="font-size:12px">(나)</span>' : ''}</span>
+    ${V.isHost && i > 0 ? `<button class="small ghost" data-act="kick" data-i="${i}">내보내기</button>` : ''}</div>`).join('');
+  return `<p class="muted" style="margin:0">방 코드</p><div class="bigcode">${esc(V.code)}</div>
+  ${V.isHost ? `<p class="muted" style="margin-top:8px">아래 링크를 단톡방에 보내거나, 코드를 불러 주세요.</p>
+    <div class="invite"><input type="text" id="inviteLink" readonly value="${esc(inviteUrl(V.code))}"><button class="small" data-act="copy">링크 복사</button></div>` : ''}
+  <h3>참여한 사람 (${V.players.length}명 · 봉투 ${V.players.length}개)</h3>
+  <div class="list">${list}</div>
+  ${V.isHost ? `<h3>설정</h3><div class="opts"><label><input type="checkbox" id="optShuffle" ${V.shuffle ? 'checked' : ''}> 출제 순서 무작위로 섞기 (끄면 들어온 순서대로)</label></div>
+    ${msgBox()}
+    <form data-form="noop"><button class="go" type="submit" data-act="start" ${V.players.length < 3 ? 'disabled' : ''}>게임 시작</button></form>
+    ${V.players.length < 3 ? '<p class="muted" style="margin-top:8px;font-size:13px">3명 이상 모이면 시작할 수 있어요.</p>' : ''}`
+  : `<p class="muted" style="margin-top:14px"><span class="spinner"></span>방장이 게임을 시작하기를 기다리는 중</p>`}
   ${loadBox()}`;
 }
-function viewEnvHandoff(){
-  const s = S.players[setterIdx()].name;
-  return `${roundHead()}<div class="secret"><p class="muted">이번 출제자</p><div class="who">${esc(s)}</div>
-  <p>${esc(s)}님만 화면을 보세요. 다른 사람은 고개를 돌려 주세요.</p>
-  <form data-form="noop" style="justify-content:center"><button class="go" type="submit" data-act="toEnv">제가 ${esc(s)}입니다</button></form></div>`;
-}
 function viewEnvPick(){
-  return `${roundHead()}<h2>봉투를 하나 고르세요</h2>
-  <p class="muted">남은 봉투 ${S.envelopes.filter(e => !e.used).length}개. 열면 명사 5개가 나와요.</p>
-  <div class="envs">${S.envelopes.map((e, i) => `<button class="env" data-act="env" data-i="${i}" ${e.used ? 'disabled' : ''} aria-label="봉투 ${i + 1}${e.used ? ' (사용됨)' : ''}"><span>${i + 1}</span></button>`).join('')}</div>`;
+  if (!isSetter()) return `${roundHead()}${waitBox(nm(V.setter), '님이 봉투를 고르는 중')}
+    <div class="envs">${V.envelopes.map((e, i) => `<button class="env ${e.used ? 'used' : ''}" disabled aria-label="봉투 ${i + 1}"><span>${i + 1}</span></button>`).join('')}</div>`;
+  return `${roundHead()}<h2>내 차례! 봉투를 하나 고르세요</h2>
+  <p class="muted">남은 봉투 ${V.envelopes.filter(e => !e.used).length}개. 열면 명사 5개가 나와요. 다른 사람에게 화면을 보이지 마세요.</p>
+  <div class="envs">${V.envelopes.map((e, i) => `<button class="env ${e.used ? 'used' : ''}" data-act="env" data-i="${i}" ${e.used ? 'disabled' : ''} aria-label="봉투 ${i + 1}${e.used ? ' (사용됨)' : ''}"><span>${i + 1}</span></button>`).join('')}</div>`;
 }
 function viewEnvOpen(){
-  const e = S.envelopes[S.envIdx];
-  return `${roundHead()}<h2>봉투 ${S.envIdx + 1}번: 히든 워드를 고르세요</h2>
+  if (!isSetter()) return `${roundHead()}${waitBox(nm(V.setter), `님이 봉투 ${V.envIdx + 1}번을 열고 히든 워드를 고르는 중`)}`;
+  return `${roundHead()}<h2>봉투 ${V.envIdx + 1}번: 히든 워드를 고르세요</h2>
   <p class="muted">이 중 하나가 정답이 돼요. 95% 힌트를 찾기 쉬운 단어일수록 출제하기 편하지만, 그만큼 맞히기도 쉬워요.</p>
-  <div class="words">${e.words.map(w => `<button data-act="word" data-w="${esc(w)}">${esc(w)}</button>`).join('')}</div>`;
-}
-function viewHintHandoff(){
-  const s = S.players[setterIdx()].name;
-  return `${roundHead()}${steps()}<div class="secret"><p class="muted">${S.stage}차 힌트 찾기</p><div class="who">${esc(s)}</div>
-  <p>출제자만 화면을 보세요. 힌트 후보의 유사도가 보여요.</p>
-  <form data-form="noop" style="justify-content:center"><button class="go" type="submit" data-act="toHint">제가 ${esc(s)}입니다</button></form></div>`;
+  <div class="words">${(V.secret.words || []).map(w => `<button data-act="word" data-w="${esc(w)}">${esc(w)}</button>`).join('')}</div>`;
 }
 function viewHint(){
-  const att = S.attempts.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
-  return `${roundHead()}${steps()}<h2>${S.stage}차 힌트 찾기</h2>
-  <p>히든 워드 <b style="color:var(--brass)">${esc(S.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 정답이 들어간 단어는 안 돼요. 정답의 일부(예: 눈사람 → 눈)는 써도 돼요.</p>
+  if (!isSetter()) return `${roundHead()}${steps()}${waitBox(nm(V.setter), `님이 ${V.stage}차 힌트를 찾는 중 · 시도 ${V.tries}번`)}
+    ${hintChips()}${V.guesses.length ? '<h3>지금까지 추측</h3>' + guessTable(V.guesses) : ''}`;
+  const s = V.secret;
+  const att = s.attempts.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+  return `${roundHead()}${steps()}<h2>${V.stage}차 힌트 찾기</h2>
+  <p>히든 워드 <b style="color:var(--brass)">${esc(s.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 정답이 들어간 단어는 안 돼요. 정답의 일부(예: 눈사람 → 눈)는 써도 돼요. 시도한 단어는 나만 보여요.</p>
   ${hintChips()}
-  ${S.passHint ? `<div class="ok"><b>${esc(S.passHint.text)}</b> · ${S.passHint.score}% 통과! 이 힌트를 공개할까요?
+  ${s.passHint ? `<div class="ok"><b>${esc(s.passHint.text)}</b> · ${s.passHint.score}% 통과! 이 힌트를 모두에게 공개할까요?
      <div class="row" style="margin-top:10px"><button class="go" data-act="publish">이 힌트 공개</button><button class="ghost" data-act="discard">다른 힌트 찾기</button></div></div>` :
-  `<form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어" ${busy ? 'disabled' : ''}>
-  <button class="go" type="submit" ${busy ? 'disabled' : ''}>${busy ? '<span class="spinner"></span>계산 중' : '유사도 확인'}</button></form>`}
+  `<form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어" ${V.hintBusy ? 'disabled' : ''}>
+  <button class="go" type="submit" ${V.hintBusy ? 'disabled' : ''}>${V.hintBusy ? '<span class="spinner"></span>계산 중' : '유사도 확인'}</button></form>`}
   ${msgBox()}
-  ${att ? `<h3>이번 단계 시도 (${S.attempts.length})</h3><div class="tablebox"><table>${att}</table></div>` : ''}
-  ${S.attempts.length >= 8 && !S.passHint ? `<div class="note">도저히 못 찾겠다면 포기할 수 있어요. 라운드가 끝나고 출제자는 지금까지 받은 점수만 가져가요. <button class="small" data-act="askGive">힌트 포기</button><span id="giveBox" hidden> <button class="small" data-act="giveup">정말 포기</button></span></div>` : ''}
-  ${!engine.ready ? loadBox() : ''}`;
+  ${att ? `<h3>이번 단계 시도 (${s.attempts.length})</h3><div class="tablebox"><table>${att}</table></div>` : ''}
+  ${s.attempts.length >= 8 && !s.passHint ? `<div class="note">도저히 못 찾겠다면 포기할 수 있어요. 라운드가 끝나고 출제자는 지금까지 받은 점수만 가져가요. <button class="small" data-act="askGive">힌트 포기</button><span id="giveBox" hidden> <button class="small" data-act="giveup">정말 포기</button></span></div>` : ''}
+  ${!V.engine.ready ? loadBox() : ''}`;
 }
-function viewHintPublic(){
-  const h = S.hints[S.hints.length - 1];
-  return `${roundHead()}${steps()}<p class="muted" style="margin:0">${S.stage}차 힌트 · 정답과 ${h.score}%</p><div class="reveal">${esc(h.text)}</div>
-  <p>이제 모두 화면을 봐도 돼요. 맞히는 사람은 한 명씩 몰래 단어를 적어요. 히든 워드를 정확히 적어야 정답이에요.</p>
-  ${hintChips()}
-  <form data-form="noop"><button class="go" type="submit" data-act="toGuessHandoff">추측 시작</button></form>`;
-}
-function viewGuessHandoff(){
-  const p = S.players[guessers()[S.cursor]].name;
-  return `${roundHead()}${steps()}<div class="secret"><p class="muted">${S.stage}차 추측 · ${S.cursor + 1} / ${guessers().length}</p><div class="who">${esc(p)}</div>
-  <p>${esc(p)}님 차례예요. 다른 사람은 보지 마세요.</p>
-  <form data-form="noop" style="justify-content:center"><button class="go" type="submit" data-act="toGuess">제가 ${esc(p)}입니다</button></form></div>`;
+function submittedChips(){
+  const gs = V.order.filter(i => i !== V.setter);
+  return `<div class="chips">${gs.map(i => `<span class="chip ${V.submitted.includes(i) ? 'done' : ''}">${V.submitted.includes(i) ? '✓ ' : ''}${esc(nm(i))}${V.players[i].online ? '' : ' (연결 끊김)'}</span>`).join('')}</div>`;
 }
 function viewGuess(){
-  const p = S.players[guessers()[S.cursor]].name;
-  return `${roundHead()}${steps()}<h2>${esc(p)}님의 추측</h2>
-  ${hintChips()}
-  <form data-form="guess"><input type="text" id="guessIn" autocomplete="off" maxlength="20" placeholder="히든 워드라고 생각하는 명사">
-  <button class="go" type="submit">제출하고 넘기기</button></form>${msgBox()}
-  ${S.guesses.length ? '<h3>이전 단계 추측</h3>' + guessTable(S.guesses) : ''}`;
+  const h = V.hints[V.hints.length - 1];
+  const top = `${roundHead()}${steps()}<p class="muted" style="margin:0">${V.stage}차 힌트 · 정답과 ${h.score}%</p><div class="reveal">${esc(h.text)}</div>`;
+  const force = V.isHost && V.submitted.length ? `<div class="note">연결이 끊긴 사람을 기다리지 않으려면 <button class="small" data-act="force">낸 사람만 채점</button></div>` : '';
+  if (isSetter()) return `${top}<p>다른 사람들이 추측하는 중이에요.</p>${submittedChips()}${force}${hintChips()}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
+  const mine = V.myGuess;
+  const form = mine !== null && !editingGuess
+    ? `<div class="ok">내 추측: <b>${esc(mine)}</b> · 제출 완료 <button class="small ghost" data-act="editGuess">바꾸기</button></div>`
+    : `<p>히든 워드라고 생각하는 명사를 적으세요. 정확히 같아야 정답이에요. 모두 내면 채점돼요.</p>
+       <form data-form="guess"><input type="text" id="guessIn" autocomplete="off" maxlength="20" placeholder="히든 워드 추측">
+       <button class="go" type="submit">제출</button></form>`;
+  return `${top}${form}${msgBox()}<h3>제출 현황</h3>${submittedChips()}${force}${hintChips()}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
 }
-const viewJudging = () => `${roundHead()}${steps()}<h2><span class="spinner"></span>채점 중</h2><p class="muted">${S.pending.length}개 추측을 확인하고 있어요.</p>`;
-const viewJudgeRetry = () => `${roundHead()}${steps()}<h2>채점이 멈췄어요</h2><p class="muted">제출된 ${S.pending.length}개 추측은 그대로 있어요.</p><form data-form="noop"><button class="go" type="submit" data-act="retry">다시 채점</button></form>`;
+const viewJudging = () => `${roundHead()}${steps()}<h2><span class="spinner"></span>채점 중</h2><p class="muted">추측을 확인하고 있어요.</p>`;
 function viewStageResult(){
-  const s = S.players[setterIdx()].name;
-  const best = Math.max(...S.guesses.filter(g => g.stage === S.result.stage).map(g => g.score));
-  return `${roundHead()}${steps()}<h2>${S.result.stage}차: 아무도 못 맞혔어요</h2>
-  <p>출제자 <b>${esc(s)}</b> <span class="delta">+${S.result.pts}점</span> · 가장 가까운 추측 <b style="font-family:var(--mono)">${best}%</b></p>
-  ${hintChips()}<h3>추측 결과</h3>${guessTable(S.guesses)}
-  <form data-form="noop"><button class="go" type="submit" data-act="nextStage">${S.stage + 1}차 힌트로</button></form>`;
+  const best = Math.max(...V.guesses.filter(g => g.stage === V.result.stage).map(g => g.score));
+  return `${roundHead()}${steps()}<h2>${V.result.stage}차: 아무도 못 맞혔어요</h2>
+  <p>출제자 <b>${esc(nm(V.setter))}</b> <span class="delta">+${V.result.pts}점</span> · 가장 가까운 추측 <b style="font-family:var(--mono)">${best}%</b></p>
+  ${hintChips()}<h3>추측 결과</h3>${guessTable(V.guesses)}
+  ${hostOnlyNext(`${V.stage + 1}차 힌트로`)}`;
 }
 function viewRoundEnd(){
-  const s = S.players[setterIdx()].name;
-  const r = S.result;
+  const r = V.result;
   const head = r.type === 'hit'
-    ? `<h2>${r.stage}차 힌트에서 정답!</h2><p>${r.winners.map(w => `<b>${esc(S.players[w].name)}</b> <span class="delta">+${r.pts}</span>`).join(' · ')}</p>`
+    ? `<h2>${r.stage}차 힌트에서 정답!</h2><p>${r.winners.map(w => `<b>${esc(nm(w))}</b> <span class="delta">+${r.pts}</span>`).join(' · ')}</p>`
     : r.type === 'giveup' ? `<h2>출제자가 ${r.stage}차 힌트를 포기했어요</h2>`
-    : `<h2>출제자 ${esc(s)} 완벽 방어</h2><p>3차 힌트까지 아무도 못 맞혔어요.</p>`;
-  const deltas = Object.entries(S.deltas).map(([i, d]) => `${esc(S.players[i].name)} <span class="delta">+${d}</span>`).join(' · ');
-  const env = S.envelopes[S.envIdx];
-  const last = S.round + 1 >= n();
-  return `${roundHead()}${steps()}<p class="muted" style="margin:0">히든 워드</p><div class="reveal">${esc(S.hidden)}</div>
+    : `<h2>출제자 ${esc(nm(V.setter))} 완벽 방어</h2><p>3차 힌트까지 아무도 못 맞혔어요.</p>`;
+  const deltas = Object.entries(V.deltas).map(([i, d]) => `${esc(nm(+i))} <span class="delta">+${d}</span>`).join(' · ');
+  const last = V.round + 1 >= V.players.length;
+  return `${roundHead()}${steps()}<p class="muted" style="margin:0">히든 워드</p><div class="reveal">${esc(V.reveal.hidden)}</div>
   ${head}<p class="muted">이번 라운드 획득: ${deltas || '없음'}</p>
-  <p class="muted" style="font-size:13px">봉투 ${S.envIdx + 1}번에 있던 단어: ${env.words.map(esc).join(', ')}</p>
-  ${hintChips()}${S.guesses.length ? '<h3>모든 추측</h3>' + guessTable(S.guesses) : ''}
-  <form data-form="noop"><button class="go" type="submit" data-act="nextRound">${last ? '최종 결과 보기' : '다음 라운드'}</button></form>`;
+  <p class="muted" style="font-size:13px">봉투 ${V.envIdx + 1}번에 있던 단어: ${V.reveal.words.map(esc).join(', ')}</p>
+  ${hintChips()}${V.guesses.length ? '<h3>모든 추측</h3>' + guessTable(V.guesses) : ''}
+  ${hostOnlyNext(last ? '최종 결과 보기' : '다음 라운드')}`;
 }
 function viewFinal(){
-  const ranked = S.players.map((p, i) => ({...p, i})).sort((a, b) => b.score - a.score);
+  const ranked = V.players.map((p, i) => ({...p, i})).sort((a, b) => b.score - a.score);
   const top = ranked[0].score;
   const winners = ranked.filter(p => p.score === top).map(p => esc(p.name)).join(', ');
-  return `<div class="eyebrow">게임 종료 · ${n()} 라운드</div><div class="reveal" style="font-size:clamp(34px,7vw,56px)">${winners}</div>
+  return `<div class="eyebrow">게임 종료 · ${V.players.length} 라운드</div><div class="reveal" style="font-size:clamp(34px,7vw,56px)">${winners}</div>
   <p>${top}점으로 우승!</p>
-  <div class="board" style="margin-top:14px">${ranked.map((p, k) => `<div><span>${k + 1}. ${esc(p.name)}</span><b>${p.score}</b></div>`).join('')}</div>
-  <form data-form="noop"><button class="go" type="submit" data-act="again">같은 멤버로 다시</button><button type="button" class="ghost" data-act="reset">처음부터 설정</button></form>`;
+  <div class="board" style="margin-top:14px">${ranked.map((p, k) => `<div class="${p.i === V.me ? 'me' : ''}"><span>${k + 1}. ${esc(p.name)}</span><b>${p.score}</b></div>`).join('')}</div>
+  ${V.isHost ? `<form data-form="noop"><button class="go" type="submit" data-act="again">같은 멤버로 다시</button><button type="button" class="ghost" data-act="lobby">로비로 (사람 더 받기)</button></form>` : '<p class="muted" style="margin-top:14px">방장이 다음 판을 열면 이어서 할 수 있어요.</p>'}`;
 }
 function viewRail(){
-  if (S.phase === 'setup') return `<h3 style="margin-top:0">진행 방식</h3>
-    <p style="font-size:14px">① 출제자가 봉투 하나를 열어 명사 5개 중 하나를 몰래 골라요.<br>② 출제자는 히든 워드와 유사도 ${THR}% 이상인 힌트가 나올 때까지 후보를 넣어 봐요. 통과한 힌트만 공개돼요.<br>③ 나머지가 한 명씩 몰래 히든 워드를 적어요. 정확히 같아야 정답.<br>④ 아무도 못 맞히면 출제자가 점수를 받고 다음 힌트로 (최대 3차).</p>
-    <p class="muted" style="font-size:13px">기준: 기차→철도, 치킨→닭, 선생님→학생 정도로 가까워야 95%를 넘어요. 기차→버스, 우산→비는 못 넘어요.</p>`;
-  const s = setterIdx();
-  const live = S.phase !== 'final';
-  return `<h3 style="margin-top:0">점수판</h3><div class="board">${S.order.map(i => {
-    const p = S.players[i];
-    return `<div class="${i === s && live ? 'setter' : ''}"><span>${esc(p.name)}${i === s && live ? '<span class="role">출제자</span>' : ''}</span><b>${p.score}</b></div>`;
+  const live = V.phase !== 'final' && V.phase !== 'lobby';
+  const order = V.phase === 'lobby' ? V.players.map((_, i) => i) : V.order;
+  return `<h3 style="margin-top:0">${V.phase === 'lobby' ? '참여자' : '점수판'} <span style="font-family:var(--mono);color:var(--brass);letter-spacing:.15em;margin-left:6px">${esc(V.code)}</span></h3>
+  <div class="board">${order.map(i => {
+    const p = V.players[i];
+    return `<div class="${i === V.setter && live ? 'setter' : ''} ${i === V.me ? 'me' : ''}"><span><span class="dot ${p.online ? '' : 'off'}"></span>${esc(p.name)}${i === V.me ? ' (나)' : ''}${i === V.setter && live ? '<span class="role">출제자</span>' : ''}</span><b>${p.score}</b></div>`;
   }).join('')}</div>
-  <p class="muted" style="font-size:12px;margin-top:10px">위에서부터 출제 순서 · 남은 봉투 ${S.envelopes.filter(e => !e.used).length}개</p>
+  ${live ? `<p class="muted" style="font-size:12px;margin-top:10px">위에서부터 출제 순서 · 남은 봉투 ${V.envelopes.filter(e => !e.used).length}개</p>` : ''}
   <h3>점수표</h3>${rulesTable()}
-  <button class="small ghost" data-act="askReset" style="margin-top:8px">게임 중단</button>
-  <div id="resetBox" hidden><p style="font-size:13px;margin:8px 0">점수를 지우고 설정 화면으로 갈까요?</p><button class="small" data-act="reset">네, 중단</button></div>`;
+  ${netStatus ? `<div class="note">${esc(netStatus)}</div>` : ''}
+  ${V.isHost ? `<button class="small ghost" data-act="askReset" style="margin-top:8px">게임 중단</button>
+    <div id="resetBox" hidden><p style="font-size:13px;margin:8px 0">점수를 지우고 로비로 돌아갈까요? 모두 연결은 유지돼요.</p><button class="small" data-act="lobby">로비로</button> <button class="small ghost" data-act="closeRoom">방 닫기</button></div>`
+  : `<button class="small ghost" data-act="leave" style="margin-top:8px">나가기</button>`}`;
 }
+const views = {lobby:viewLobby, 'env-pick':viewEnvPick, 'env-open':viewEnvOpen, hint:viewHint, guess:viewGuess,
+  judging:viewJudging, 'stage-result':viewStageResult, 'round-end':viewRoundEnd, final:viewFinal};
 
-const views = {setup:viewSetup, 'env-handoff':viewEnvHandoff, 'env-pick':viewEnvPick, 'env-open':viewEnvOpen,
-  'hint-handoff':viewHintHandoff, hint:viewHint, 'hint-public':viewHintPublic, 'guess-handoff':viewGuessHandoff,
-  guess:viewGuess, judging:viewJudging, 'judge-retry':viewJudgeRetry, 'stage-result':viewStageResult,
-  'round-end':viewRoundEnd, final:viewFinal};
-
+let lastPhaseKey = '';
 function render(){
-  save();
-  document.getElementById('stage').innerHTML = (views[S.phase] || viewSetup)();
-  document.getElementById('rail').innerHTML = viewRail();
-  const f = document.querySelector('#stage input[type=text]:not([data-i])');
-  if (f && !f.disabled) f.focus();
-}
-function readSetup(){
-  document.querySelectorAll('input[data-i]').forEach(el => { S.players[+el.dataset.i].name = el.value; });
-  const sh = document.getElementById('optShuffle'); if (sh) S.shuffle = sh.checked;
+  // keep what someone is typing when a new view arrives
+  const keep = {};
+  document.querySelectorAll('#stage input[type=text]').forEach(el => keep[el.id] = el.value);
+  const focusId = document.activeElement && document.activeElement.id;
+  const phaseKey = V ? V.phase + V.round + V.stage : 'none';
+  if (phaseKey !== lastPhaseKey){ editingGuess = false; lastPhaseKey = phaseKey; }
+
+  let main, rail = '';
+  if (!mode) main = viewEntry();
+  else if (!V) main = viewConnecting();
+  else { main = (views[V.phase] || viewLobby)(); rail = viewRail(); }
+  $('stage').innerHTML = main;
+  $('rail').innerHTML = rail;
+  $('rail').hidden = !rail;
+  $('wrap').classList.toggle('solo', !rail);
+  for (const id in keep){ const el = $(id); if (el && !el.readOnly && !el.value && keep[id]) el.value = keep[id]; }
+  if (focusId){ const el = $(focusId); if (el && !el.disabled) el.focus(); }
 }
 
+/* ================= input ================= */
 document.addEventListener('submit', e => {
   e.preventDefault();
-  if (busy) return;
   const f = e.target.dataset.form;
-  const act = e.submitter && e.submitter.dataset.act;
-  if (f === 'start'){ readSetup(); startGame(); }
-  else if (f === 'hint') tryHint(document.getElementById('hintIn').value);
-  else if (f === 'guess') submitGuess(document.getElementById('guessIn').value);
-  else if (act) doAct(act);
+  const btn = e.submitter && e.submitter.dataset.act;
+  const val = id => { const el = $(id); const v = el ? el.value : ''; if (el && el.type === 'text') el.value = ''; return v; };
+  if (f === 'host'){
+    const name = $('hostName').value.trim();
+    if (!name){ entryMsg = '이름을 적어 주세요.'; return render(); }
+    store.set('sim95-name', name); entryMsg = '';
+    startHost(newCode(), name);
+  } else if (f === 'join' || f === 'joinMain'){
+    const code = (f === 'join' ? $('joinCode').value : $('mainCode').value).toUpperCase().replace(/[^A-Z]/g, '');
+    const name = (f === 'join' ? $('joinName').value : $('mainName').value).trim();
+    if (code.length !== 4){ entryMsg = '방 코드 4글자를 확인해 주세요.'; return render(); }
+    if (!name){ entryMsg = '이름을 적어 주세요.'; return render(); }
+    entryMsg = '';
+    startGuest(code, name);
+  } else if (f === 'hint') act({a:'hint', text:val('hintIn')});
+  else if (f === 'guess'){ const w = val('guessIn'); if (w.trim()){ editingGuess = false; act({a:'guess', w}); } }
+  else if (btn) doAct(btn);
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
-  if (!b || b.type === 'submit' && b.closest('form')) return;
-  doAct(b.dataset.act, b.dataset.i, b.dataset.w);
+  if (!b || (b.type === 'submit' && b.closest('form'))) return;
+  doAct(b.dataset.act, b.dataset.i, b.dataset.w, b);
 });
-document.addEventListener('change', e => { if (S.phase === 'setup' && e.target.closest('#stage')){ readSetup(); save(); } });
-
-function doAct(act, i, w){
-  if (act === 'add'){ readSetup(); S.players.push({name:'플레이어 ' + (S.players.length + 1), score:0}); render(); }
-  else if (act === 'rm'){ readSetup(); S.players.splice(+i, 1); render(); }
-  else if (act === 'toEnv'){ S.phase = 'env-pick'; render(); }
-  else if (act === 'env') pickEnvelope(+i);
-  else if (act === 'word') pickWord(w);
-  else if (act === 'toHint'){ S.phase = 'hint'; S.msg = ''; render(); }
-  else if (act === 'publish') publishHint();
-  else if (act === 'discard'){ S.passHint = null; render(); }
-  else if (act === 'askGive'){ const g = document.getElementById('giveBox'); if (g) g.hidden = !g.hidden; }
-  else if (act === 'giveup') giveUp();
-  else if (act === 'toGuessHandoff'){ S.phase = 'guess-handoff'; render(); }
-  else if (act === 'toGuess'){ S.phase = 'guess'; S.msg = ''; render(); }
-  else if (act === 'retry') judge();
-  else if (act === 'nextStage') nextStage();
-  else if (act === 'nextRound') nextRound();
-  else if (act === 'again'){ S.players.forEach(p => p.score = 0); startGame(); }
-  else if (act === 'askReset'){ const r = document.getElementById('resetBox'); if (r) r.hidden = !r.hidden; }
-  else if (act === 'reset'){ S = fresh(S.players.map(p => p.name)); render(); }
-  else if (act === 'reload'){ loadEngine().catch(() => {}); paintLoad(); }
+document.addEventListener('change', e => {
+  if (e.target.id === 'optShuffle') act({a:'shuffle', v:e.target.checked});
+});
+function doAct(a, i, w, btn){
+  if (a === 'env') act({a:'env', i:+i});
+  else if (a === 'word') act({a:'word', w});
+  else if (a === 'kick') act({a:'kick', i:+i});
+  else if (a === 'askGive'){ const g = $('giveBox'); if (g) g.hidden = !g.hidden; }
+  else if (a === 'askReset'){ const r = $('resetBox'); if (r) r.hidden = !r.hidden; }
+  else if (a === 'editGuess'){ editingGuess = true; render(); }
+  else if (a === 'reloadEngine'){ loadEngine().catch(() => {}); push(); }
+  else if (a === 'copy'){
+    const el = $('inviteLink');
+    const done = () => { if (btn) btn.textContent = '복사됨'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).then(done, () => { el.select(); });
+    else el.select();
+  }
+  else if (a === 'leave' || a === 'closeRoom' || a === 'toMain'){
+    if (a === 'closeRoom' && S) { try { localStorage.removeItem('sim95-room-' + S.code); } catch(e){} }
+    cleanupNet(); mode = null; V = null; S = null; netStatus = ''; entryMsg = ''; setUrl(''); render();
+  }
+  else act({a});
 }
 
-render();
-loadEngine().catch(() => {});
+/* ================= boot ================= */
+{
+  const q = new URLSearchParams(location.search);
+  const hostCode = (q.get('host') || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const saved = hostCode && store.get('sim95-room-' + hostCode);
+  if (saved) startHost(hostCode, saved.players[0].name, saved);
+  else { if (hostCode) setUrl(''); render(); }
+}
 </script>
 </body>
 </html>
