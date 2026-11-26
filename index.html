@@ -180,8 +180,8 @@ async function similarity(a, b){
   return toPct(s);
 }
 
-/* ================= noun bank ================= */
-const NOUNS = [...new Set(`기차 냉장고 피아노 눈사람 도서관 치킨 비행기 선생님 시계 우산 바다 학교 병원 고양이 강아지 사과 휴대폰 자동차 자전거 축구 야구 수영장 놀이공원 생일 케이크 커피 라면 김치 떡볶이 피자 햄버거 아이스크림 초콜릿 우유 빵 김밥 소주 맥주 경찰 소방관 의사 요리사 가수 배우 군인 농부 어부 대통령 할머니 아기 친구 결혼식 크리스마스 설날 추석 여름 겨울 태풍 무지개 번개 달 태양 별 지구 우주 화산 사막 정글 산 강 섬 호수 폭포 동굴 나무 꽃 장미 해바라기 호랑이 사자 코끼리 기린 원숭이 펭귄 돌고래 상어 고래 거북이 토끼 돼지 개구리 나비 모기 거미 공룡 로봇 컴퓨터 텔레비전 카메라 안경 신발 모자 가방 지갑 반지 침대 의자 책상 소파 냉면 칫솔 비누 수건 열쇠 연필 지우개 공책 가위 풍선 선물 편지 신문 영화 음악 노래 그림 사진 게임 시험 숙제 월급 은행 시장 백화점 편의점 카페 식당 호텔 공항 지하철 택시 버스 경찰서 감옥 교회 왕 공주 마법사 유령 천사 전쟁 올림픽 월드컵 마라톤 헬스장 낚시 캠핑 여행 여권 지도 나침반 등산 스키 썰매 구름 안개 소나기 눈썰매장 군대 대학교 회사 사장님 택배 엘리베이터 계단 창문 전자레인지 세탁기 에어컨 선풍기 이불 베개 치약 화장실 목욕탕 찜질방 노래방 피시방 만화책 소설 일기 달력 생선 고기 계란 두부 된장 고추장 젓가락 숟가락 냄비 프라이팬 배 눈 말 밤 차 다리 김 굴 감 비 벌 병 바람 풀 못 절 쥐 줄 손 발 상 부채 가지 거리 볼 연 잔 성 기사 수도 공기 경기 정원 의사 대리 사기 전기 장 무 철 타자 고개`.split(/\s+/))];
+/* ================= noun bank: every word has a homonym (배: 과일/선박/신체, 눈: 신체/날씨 …) ================= */
+const NOUNS = [...new Set(`배 눈 말 밤 차 다리 김 굴 감 비 벌 병 바람 풀 못 절 쥐 줄 손 발 상 부채 가지 거리 볼 연 잔 성 기사 수도 공기 경기 정원 의사 대리 사기 전기 장 무 철 타자 고개 사과 은행 신 해 달 목 산 금 북 문 시 양 새 매 국 팔 표 판 가장 감사 고사 공사 동기 부자 사고 사장 선수 수상 연기 유리 일기 전원 조리 지도 천재 초대 화장 경로 도장 무기 부상 사전 성인 시청 신부 양식 이상 장기 정상 지구 차도 회의 동화 대기 부대 가사 제기`.split(/\s+/))];
 
 /* ================= common ================= */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -228,10 +228,10 @@ function viewFor(pid){
     myPick:S.picks && S.picks[pid] ? {env:S.picks[pid].env, word:S.picks[pid].word, words:S.envelopes[S.picks[pid].env].words} : null,
     drafted:S.picks ? Object.keys(S.picks).filter(k => S.picks[k].word).map(Number) : [],
     stage:S.stage, hints:S.hints, guesses:S.guesses, submitted:Object.keys(S.pending).map(Number),
-    attempts:S.phase === 'hint' ? S.attempts : [], hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
+    attempts:S.attempts || [], hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
     engine:{ready:engine.ready, pct:engine.pct, failed:engine.failed},
     myGuess:S.pending[pid] ?? null,
-    secret:isSetter && !end ? {hidden:S.hidden, attempts:S.attempts, passHint:S.passHint} : null,
+    secret:isSetter && !end ? {hidden:S.hidden} : null,
     reveal:end ? {hidden:S.hidden, words:(S.envelopes[S.envIdx] || {}).words || []} : null};
 }
 function push(){
@@ -271,11 +271,12 @@ async function tryHint(pid, h){
   if (!a){ S.msgs[pid] = '힌트 단어를 입력해 주세요.'; return push(); }
   if (a === b || a.includes(b)){ S.msgs[pid] = '정답 단어와 같거나 정답이 들어간 힌트는 쓸 수 없어요.'; return push(); }
   if (S.hints.some(x => norm(x.text) === a)){ S.msgs[pid] = '이미 공개한 힌트예요.'; return push(); }
+  if (S.attempts.some(x => x.stage === S.stage && norm(x.text) === a)){ S.msgs[pid] = '이번 단계에서 이미 시도한 단어예요.'; return push(); }
   S.hintBusy = true; push();
   try {
     const sc = await similarity(S.hidden, h);
-    S.attempts.unshift({text:h, score:sc});
-    if (sc >= THR) S.passHint = {text:h, score:sc};
+    S.attempts.push({text:h, score:sc, stage:S.stage});
+    if (sc >= THR){ S.hints.push({text:h, score:sc, stage:S.stage}); S.pending = {}; S.phase = 'guess'; }
   } catch(e){ S.msgs[pid] = '방장 기기에서 유사도 모델을 불러오지 못했어요. 방장의 인터넷 연결을 확인해 주세요.'; }
   S.hintBusy = false; push();
 }
@@ -325,13 +326,8 @@ function handle(pid, a){
         if (draftDone()){ S.round = 0; beginRound(); }
       } break;
     case 'forceDraft': if (pid === 0 && S.phase === 'draft') forceDraft(); break;
-    case 'hint': if (S.phase === 'hint' && pid === setter && !S.hintBusy && !S.passHint) return tryHint(pid, String(a.text || '')); break;
-    case 'publish':
-      if (S.phase === 'hint' && pid === setter && S.passHint){
-        S.hints.push({...S.passHint, stage:S.stage}); S.passHint = null; S.attempts = []; S.pending = {}; S.phase = 'guess';
-      } break;
-    case 'discard': if (S.phase === 'hint' && pid === setter) S.passHint = null; break;
-    case 'giveup': if (S.phase === 'hint' && pid === setter && S.attempts.length >= 8){ S.result = {type:'giveup', stage:S.stage}; S.phase = 'round-end'; } break;
+    case 'hint': if (S.phase === 'hint' && pid === setter && !S.hintBusy) return tryHint(pid, String(a.text || '')); break;
+    case 'giveup': if (S.phase === 'hint' && pid === setter && S.attempts.filter(x => x.stage === S.stage).length >= 8){ S.result = {type:'giveup', stage:S.stage}; S.phase = 'round-end'; } break;
     case 'guess':
       if (S.phase === 'guess' && pid !== setter && S.order.includes(pid)){
         const w = String(a.w || '').trim().slice(0, 20);
@@ -342,7 +338,7 @@ function handle(pid, a){
     case 'force': if (pid === 0 && S.phase === 'guess' && Object.keys(S.pending).length) return judge(); break;
     case 'next':
       if (pid !== 0) break;
-      if (S.phase === 'stage-result'){ S.stage++; S.phase = 'hint'; S.result = null; S.attempts = []; S.passHint = null; }
+      if (S.phase === 'stage-result'){ S.stage++; S.phase = 'hint'; S.result = null; }
       else if (S.phase === 'round-end'){ S.round++; if (S.round >= S.players.length) S.phase = 'final'; else beginRound(); }
       break;
     case 'again': if (pid === 0 && S.phase === 'final') startGame(); break;
@@ -577,24 +573,30 @@ function viewDraft(){
   <div class="words">${p.words.map(w => `<button data-act="word" data-w="${esc(w)}" ${w === p.word ? 'style="outline:3px solid var(--brass)"' : ''}>${esc(w)}</button>`).join('')}</div>
   ${status}`;
 }
+/* every hint candidate the setter tried this round, newest stage first; passed ones marked */
+function tryHistory(title){
+  if (!V.attempts.length) return '';
+  let html = `<h3>${title}</h3>`;
+  for (let st = V.stage; st >= 1; st--){
+    const list = V.attempts.filter(a => a.stage === st);
+    if (!list.length) continue;
+    const rows = [...list].reverse().map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+    html += `<p class="eyebrow" style="margin:10px 0 2px">${st}차 힌트 시도 ${list.length}번</p><div class="tablebox"><table>${rows}</table></div>`;
+  }
+  return html;
+}
 function viewHint(){
-  const attRows = list => list.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+  const tries = V.attempts.filter(a => a.stage === V.stage).length;
   if (!isSetter()) return `${roundHead()}${steps()}${waitBox(nm(V.setter), `님이 ${V.stage}차 힌트를 찾는 중${V.hintBusy ? ' · 계산 중' : ''}`)}
-    <h3>출제자가 시도한 힌트 후보 (${V.attempts.length})</h3>
-    ${V.attempts.length ? `<div class="tablebox"><table>${attRows(V.attempts)}</table></div>` : '<p class="muted">아직 시도한 단어가 없어요.</p>'}
-    ${hintChips()}${V.guesses.length ? '<h3>지금까지 추측</h3>' + guessTable(V.guesses) : ''}`;
-  const s = V.secret;
-  const att = s.attempts.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+    ${hintChips()}${tryHistory('출제자가 시도한 힌트 후보') || '<p class="muted" style="text-align:center">아직 시도한 단어가 없어요.</p>'}
+    ${V.guesses.length ? '<h3>지금까지 추측</h3>' + guessTable(V.guesses) : ''}`;
   return `${roundHead()}${steps()}<h2>${V.stage}차 힌트 찾기</h2>
-  <p>히든 워드 <b style="color:var(--brass)">${esc(s.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 시도하는 단어와 유사도는 모두에게 실시간으로 보여요.</p>
-  ${hintChips()}
-  ${s.passHint ? `<div class="ok"><b>${esc(s.passHint.text)}</b> · ${s.passHint.score}% 통과! 이 힌트를 모두에게 공개할까요?
-     <div class="row" style="margin-top:10px"><button class="go" data-act="publish">이 힌트 공개</button><button class="ghost" data-act="discard">다른 힌트 찾기</button></div></div>` :
-  `<form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어" ${V.hintBusy ? 'disabled' : ''}>
-  <button class="go" type="submit" ${V.hintBusy ? 'disabled' : ''}>${V.hintBusy ? '<span class="spinner"></span>계산 중' : '유사도 확인'}</button></form>`}
+  <p>히든 워드 <b style="color:var(--brass)">${esc(V.secret.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. ${THR}%를 넘으면 바로 공개되고 추측이 시작돼요. 시도하는 단어와 유사도는 모두에게 실시간으로 보여요.</p>
+  <form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어" ${V.hintBusy ? 'disabled' : ''}>
+  <button class="go" type="submit" ${V.hintBusy ? 'disabled' : ''}>${V.hintBusy ? '<span class="spinner"></span>계산 중' : '유사도 확인'}</button></form>
   ${msgBox()}
-  ${att ? `<h3>이번 단계 시도 (${s.attempts.length})</h3><div class="tablebox"><table>${att}</table></div>` : ''}
-  ${s.attempts.length >= 8 && !s.passHint ? `<div class="note">도저히 못 찾겠다면 포기할 수 있어요. 라운드가 끝나고 출제자는 지금까지 받은 점수만 가져가요. <button class="small" data-act="askGive">힌트 포기</button><span id="giveBox" hidden> <button class="small" data-act="giveup">정말 포기</button></span></div>` : ''}
+  ${hintChips()}${tryHistory('시도한 힌트')}
+  ${tries >= 8 ? `<div class="note">도저히 못 찾겠다면 포기할 수 있어요. 라운드가 끝나고 출제자는 지금까지 받은 점수만 가져가요. <button class="small" data-act="askGive">힌트 포기</button><span id="giveBox" hidden> <button class="small" data-act="giveup">정말 포기</button></span></div>` : ''}
   ${!V.engine.ready ? loadBox() : ''}`;
 }
 function submittedChips(){
@@ -605,21 +607,22 @@ function viewGuess(){
   const h = V.hints[V.hints.length - 1];
   const top = `${roundHead()}${steps()}<p class="muted" style="margin:0">${V.stage}차 힌트 · 정답과 ${h.score}%</p><div class="reveal">${esc(h.text)}</div>`;
   const force = V.isHost && V.submitted.length ? `<div class="note">연결이 끊긴 사람을 기다리지 않으려면 <button class="small" data-act="force">낸 사람만 채점</button></div>` : '';
-  if (isSetter()) return `${top}<p>다른 사람들이 추측하는 중이에요.</p>${submittedChips()}${force}${hintChips()}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
+  const history = `${hintChips()}${tryHistory('출제자가 시도한 힌트 전부')}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
+  if (isSetter()) return `${top}<p>다른 사람들이 추측하는 중이에요.</p>${submittedChips()}${force}${history}`;
   const mine = V.myGuess;
   const form = mine !== null && !editingGuess
     ? `<div class="ok">내 추측: <b>${esc(mine)}</b> · 제출 완료 <button class="small ghost" data-act="editGuess">바꾸기</button></div>`
     : `<p>히든 워드라고 생각하는 명사를 적으세요. 정확히 같아야 정답이에요. 모두 내면 채점돼요.</p>
        <form data-form="guess"><input type="text" id="guessIn" autocomplete="off" maxlength="20" placeholder="히든 워드 추측">
        <button class="go" type="submit">제출</button></form>`;
-  return `${top}${form}${msgBox()}<h3>제출 현황</h3>${submittedChips()}${force}${hintChips()}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
+  return `${top}${form}${msgBox()}<h3>제출 현황</h3>${submittedChips()}${force}${history}`;
 }
 const viewJudging = () => `${roundHead()}${steps()}<h2><span class="spinner"></span>채점 중</h2><p class="muted">추측을 확인하고 있어요.</p>`;
 function viewStageResult(){
   const best = Math.max(...V.guesses.filter(g => g.stage === V.result.stage).map(g => g.score));
   return `${roundHead()}${steps()}<h2>${V.result.stage}차: 아무도 못 맞혔어요</h2>
   <p>출제자 <b>${esc(nm(V.setter))}</b> <span class="delta">+${V.result.pts}점</span> · 가장 가까운 추측 <b style="font-family:var(--mono)">${best}%</b></p>
-  ${hintChips()}<h3>추측 결과</h3>${guessTable(V.guesses)}
+  ${hintChips()}<h3>추측 결과</h3>${guessTable(V.guesses)}${tryHistory('출제자가 시도한 힌트 전부')}
   ${hostOnlyNext(`${V.stage + 1}차 힌트로`)}`;
 }
 function viewRoundEnd(){
@@ -633,7 +636,7 @@ function viewRoundEnd(){
   return `${roundHead()}${steps()}<p class="muted" style="margin:0">히든 워드</p><div class="reveal">${esc(V.reveal.hidden)}</div>
   ${head}<p class="muted">이번 라운드 획득: ${deltas || '없음'}</p>
   <p class="muted" style="font-size:13px">봉투 ${V.envIdx + 1}번에 있던 단어: ${V.reveal.words.map(esc).join(', ')}</p>
-  ${hintChips()}${V.guesses.length ? '<h3>모든 추측</h3>' + guessTable(V.guesses) : ''}
+  ${hintChips()}${V.guesses.length ? '<h3>모든 추측</h3>' + guessTable(V.guesses) : ''}${tryHistory('출제자가 시도한 힌트 전부')}
   ${hostOnlyNext(last ? '최종 결과 보기' : '다음 라운드')}`;
 }
 function viewFinal(){
