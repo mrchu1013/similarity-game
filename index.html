@@ -125,13 +125,53 @@ footer{max-width:1040px;margin:20px auto 0;color:var(--muted);font-size:12px}
   <main class="stage" id="stage"></main>
   <aside class="rail" id="rail"></aside>
 </div>
-<footer>각자 폰으로 접속해 참여해요. 방장 기기가 게임을 진행하고 유사도를 계산하니 방장은 창을 닫지 마세요. 유사도 모델(약 120MB)은 방장 기기에서 처음 한 번만 받아요.</footer>
+<footer>각자 폰으로 접속해 참여해요. 방장 기기가 게임을 진행하고 유사도를 계산하니 방장은 창을 닫지 마세요. 유사도는 Gemini로 계산해요.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
 /* ================= similarity engine (host only) ================= */
 const MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
-const engine = {ready:false, failed:false, pct:0, extractor:null, promise:null};
+const engine = {ready:false, failed:false, pct:0, extractor:null, promise:null, api:false};
+/* Gemini embeddings through our Cloudflare Worker (keeps the API key off this page). Empty → local model only. */
+const SIM_API = 'https://wispy-art-2b04.moil-art-alert.workers.dev';
+let apiDownUntil = 0;
+async function apiCheck(){
+  try {
+    const j = await (await fetch(SIM_API)).json();
+    if (!j.ok || !j.key) throw new Error('worker not ready');
+    engine.api = true; engine.ready = true; engine.failed = false; engine.pct = 100; enginePing(true);
+  } catch(e){ console.error(e); loadEngine().catch(() => {}); }
+}
+async function apiEmbedMany(list){
+  const keys = list.map(t => t.trim());
+  const need = [...new Set(keys)].filter(k => !embCache.has('g:' + k));
+  for (let i = 0; i < need.length; i += 16){
+    const r = await fetch(SIM_API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({texts:need.slice(i, i + 16)})});
+    if (!r.ok) throw new Error('api ' + r.status + ' ' + (await r.text()).slice(0, 200));
+    (await r.json()).vectors.forEach((v, j) => embCache.set('g:' + need[i + j], v));
+  }
+  return keys.map(k => embCache.get('g:' + k));
+}
+const dot = (x, y) => { let s = 0; for (let i = 0; i < x.length; i++) s += x[i] * y[i]; return s; };
+/* one target per meaning, so a hint for any meaning of a homonym is judged on that meaning */
+const senseText = (w, g) => `${w}: ${g.slice(0, 4).join(', ')}`;
+/* Gemini cosines all sit around 0.8–0.95, and some targets score high with everything.
+   So each target's score is measured above its own baseline (mean similarity to unrelated anchor words).
+   Calibrated 2026-11-26: unrelated ≈ 0, weak link ≈ 0.05, strong hint ≥ 0.10 (배-항해 0.09, 배-선박 0.15, 기차-철도 0.13). */
+const ANCHORS = ['연필', '냉장고', '구름', '양말', '피아노', '수학', '고양이', '신호등', '라디오', '계단', '치약', '우주'];
+const CUT_G = 0.10;
+const baseCache = new Map();
+async function baseline(t, tv){
+  if (baseCache.has(t)) return baseCache.get(t);
+  const av = await apiEmbedMany(ANCHORS);
+  const b = av.reduce((s, v) => s + dot(v, tv), 0) / av.length;
+  baseCache.set(t, b);
+  return b;
+}
+function toPctG(adj){
+  const p = adj <= CUT_G ? Math.max(0, adj) / CUT_G * 95 : 95 + (adj - CUT_G) / 0.08 * 5;
+  return Math.max(0, Math.min(99, Math.floor(p)));
+}
 const embCache = new Map();
 function loadEngine(){
   if (engine.promise) return engine.promise;
@@ -182,9 +222,18 @@ async function similarity(a, b){
     if (d.s.some(g => g.some(x => norm(x) === nb))) return 95 + hashPick(nb, 5);   // strong hint for one of the meanings
     if (d.n.some(x => norm(x) === nb)) return 85 + hashPick(nb, 9);                // related, but not enough
   }
+  if (SIM_API && Date.now() > apiDownUntil){
+    try {
+      const targets = [a, ...(d ? d.s.map(g => senseText(a, g)) : [])];
+      const [hv, ...tv] = await apiEmbedMany([b, ...targets]);
+      let best = -1;
+      for (let i = 0; i < tv.length; i++) best = Math.max(best, dot(hv, tv[i]) - await baseline(targets[i], tv[i]));
+      return toPctG(best);
+    } catch(e){ console.error(e); apiDownUntil = Date.now() + 60000; }
+  }
+  /* fallback: small local model, capped below the pass line for envelope words */
   const [x, y] = await Promise.all([embed(a), embed(b)]);
-  let s = 0; for (let i = 0; i < x.length; i++) s += x[i] * y[i];
-  const p = toPct(s);
+  const p = toPct(dot(x, y));
   return d ? Math.min(84, p) : p;
 }
 
@@ -249,7 +298,7 @@ function viewFor(pid){
     drafted:S.picks ? Object.keys(S.picks).filter(k => S.picks[k].word).map(Number) : [],
     stage:S.stage, hints:S.hints, guesses:S.guesses, submitted:Object.keys(S.pending).map(Number),
     attempts:S.attempts || [], autoIn:S.autoAt ? Math.max(0, S.autoAt - Date.now()) : 0, hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
-    engine:{ready:engine.ready, pct:engine.pct, failed:engine.failed},
+    engine:{ready:engine.ready, pct:engine.pct, failed:engine.failed, api:engine.api},
     myGuess:S.pending[pid] ?? null,
     secret:isSetter && !end ? {hidden:S.hidden} : null,
     reveal:end ? {hidden:S.hidden, words:(S.envelopes[S.envIdx] || {}).words || []} : null};
@@ -432,7 +481,7 @@ function startHost(code, name, existing){
   setUrl('?host=' + code);
   netStatus = '방을 여는 중…';
   push();
-  loadEngine().catch(() => {});
+  if (SIM_API) apiCheck(); else loadEngine().catch(() => {});
   if (!window.Peer){ netStatus = '연결 도구를 불러오지 못했어요. 인터넷을 확인하고 새로고침해 주세요.'; return render(); }
   peer = new Peer(PREFIX + code);
   peer.on('open', () => { hostTries = 0; netStatus = ''; render(); });
@@ -538,7 +587,7 @@ const msgBox = () => V.msg ? `<div class="msg">${esc(V.msg)}</div>` : '';
 const hostOnlyNext = label => `<p class="muted" style="margin-top:14px"><span class="countdown" data-until="${Date.now() + (V.autoIn || 0)}">${Math.ceil((V.autoIn || 0) / 1000)}</span>초 뒤 자동으로 ${label}</p>${V.isHost ? `<form data-form="noop"><button class="ghost small" type="submit" data-act="next">바로 넘기기</button></form>` : ''}`;
 function loadBox(){
   const e = V.engine;
-  if (e.ready) return '<div class="load">유사도 모델 준비 완료</div>';
+  if (e.ready) return `<div class="load">${e.api ? 'Gemini 유사도 연결됨' : '유사도 모델 준비 완료'}</div>`;
   if (e.failed) return `<div class="load">방장 기기에서 유사도 모델을 불러오지 못했어요.${V.isHost ? ' <button class="small" data-act="reloadEngine">다시 불러오기</button>' : ''}</div>`;
   return `<div class="load">${V.isHost ? '' : '방장 기기에서 '}유사도 모델 불러오는 중 ${e.pct}%<div class="bar"><i style="width:${e.pct}%"></i></div></div>`;
 }
