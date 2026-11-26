@@ -170,7 +170,7 @@ async function baseline(t, tv){
 }
 function toPctG(adj){
   const p = adj <= CUT_G ? Math.max(0, adj) / CUT_G * 95 : 95 + (adj - CUT_G) / 0.08 * 5;
-  return Math.max(0, Math.min(99, Math.floor(p)));
+  return clampPct(p);
 }
 const embCache = new Map();
 function loadEngine(){
@@ -209,18 +209,21 @@ async function embed(w){
 /* raw cosine → game %. Calibrated on Korean noun pairs: 0.75 raw (기차-철도, 치킨-닭, 커피-카페 급) = 95%. */
 const CUT = 0.75;
 function toPct(raw){
-  if (raw >= 0.999) return 100;
+  if (raw >= 0.999) return 99.9;
   const p = raw <= CUT ? raw / CUT * 95 : 95 + (raw - CUT) / (1 - CUT) * 5;
-  return Math.max(0, Math.min(99, Math.floor(p)));
+  return clampPct(p);
 }
+/* scores run 0.1–99.9 with one decimal; exactly 100 only for the hidden word itself */
+const clampPct = p => Math.max(0.1, Math.min(99.9, Math.round(p * 10) / 10));
+const fmtPct = s => s >= 100 ? '100' : Number(s).toFixed(1);
 const hashPick = (str, n) => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % n; };
 async function similarity(a, b){
   if (norm(a) === norm(b)) return 100;
   const d = SENSE_DICT[a];
   if (d){
     const nb = norm(b);
-    if (d.s.some(g => g.some(x => norm(x) === nb))) return 95 + hashPick(nb, 5);   // strong hint for one of the meanings
-    if (d.n.some(x => norm(x) === nb)) return 85 + hashPick(nb, 9);                // related, but not enough
+    if (d.s.some(g => g.some(x => norm(x) === nb))) return 95 + hashPick(nb, 50) / 10;   // strong hint for one of the meanings
+    if (d.n.some(x => norm(x) === nb)) return 85 + hashPick(nb, 90) / 10;                // related, but not enough
   }
   if (SIM_API && Date.now() > apiDownUntil){
     try {
@@ -557,7 +560,7 @@ function rulesTable(){
 }
 function meter(sc){
   const cls = sc >= THR ? 'hit' : sc >= 80 ? 'warm' : '';
-  return `<div class="meter" role="img" aria-label="유사도 ${sc}%"><i class="${cls}" style="width:${sc}%"></i><em style="left:${THR}%"></em></div>`;
+  return `<div class="meter" role="img" aria-label="유사도 ${fmtPct(sc)}%"><i class="${cls}" style="width:${sc}%"></i><em style="left:${THR}%"></em></div>`;
 }
 function guessTable(list){
   if (!list.length) return '';
@@ -569,7 +572,7 @@ function guessTable(list){
 }
 function hintChips(){
   if (!V.hints.length) return '';
-  return `<h3>공개된 힌트</h3><div class="hints">${V.hints.map(h => `<span class="hint"><small>${h.stage}차${h.auto ? ' · 자동' : ''} · ${h.score}%</small>${esc(h.text)}</span>`).join('')}</div>`;
+  return `<h3>공개된 힌트</h3><div class="hints">${V.hints.map(h => `<span class="hint"><small>${h.stage}차${h.auto ? ' · 자동' : ''} · ${fmtPct(h.score)}%</small>${esc(h.text)}</span>`).join('')}</div>`;
 }
 function steps(){
   let html = '<div class="steps" aria-label="힌트 단계">';
@@ -663,7 +666,7 @@ function tryHistory(title){
   for (let st = V.stage; st >= 1; st--){
     const list = V.attempts.filter(a => a.stage === st);
     if (!list.length) continue;
-    const rows = [...list].reverse().map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+    const rows = [...list].reverse().map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${fmtPct(a.score)}%</td></tr>`).join('');
     html += `<p class="eyebrow" style="margin:10px 0 2px">${st}차 힌트 시도 ${list.length}번</p><div class="tablebox"><table>${rows}</table></div>`;
   }
   return html;
@@ -687,7 +690,7 @@ function submittedChips(){
 }
 function viewGuess(){
   const h = V.hints[V.hints.length - 1];
-  const top = `${roundHead()}${steps()}<p class="muted" style="margin:0">${V.stage}차 힌트${h.auto ? ' · 출제자가 10번 안에 못 찾아 나온 자동 힌트' : ''} · 정답과 ${h.score}%</p><div class="reveal">${esc(h.text)}</div>`;
+  const top = `${roundHead()}${steps()}<p class="muted" style="margin:0">${V.stage}차 힌트${h.auto ? ' · 출제자가 10번 안에 못 찾아 나온 자동 힌트' : ''} · 정답과 ${fmtPct(h.score)}%</p><div class="reveal">${esc(h.text)}</div>`;
   const force = V.isHost && V.submitted.length ? `<div class="note">연결이 끊긴 사람을 기다리지 않으려면 <button class="small" data-act="force">낸 사람만 채점</button></div>` : '';
   const history = `${hintChips()}${tryHistory('출제자가 시도한 힌트 전부')}${V.guesses.length ? '<h3>이전 추측</h3>' + guessTable(V.guesses) : ''}`;
   if (isSetter()) return `${top}<p>다른 사람들이 추측하는 중이에요.</p>${submittedChips()}${force}${history}`;
