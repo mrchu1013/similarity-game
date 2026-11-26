@@ -533,7 +533,7 @@ function steps(){
   }
   return html + '</div>';
 }
-const roundHead = () => `<div class="eyebrow">라운드 ${V.round + 1} / ${V.players.length} · 출제자 ${esc(nm(V.setter))}${isSetter() ? ' (나)' : ''}</div>`;
+const roundHead = () => `<div class="eyebrow">1라운드 · ${V.round + 1}번째 출제 / ${V.players.length} · 출제자 ${esc(nm(V.setter))}${isSetter() ? ' (나)' : ''}</div>`;
 const msgBox = () => V.msg ? `<div class="msg">${esc(V.msg)}</div>` : '';
 const hostOnlyNext = label => `<p class="muted" style="margin-top:14px"><span class="countdown" data-until="${Date.now() + (V.autoIn || 0)}">${Math.ceil((V.autoIn || 0) / 1000)}</span>초 뒤 자동으로 ${label}</p>${V.isHost ? `<form data-form="noop"><button class="ghost small" type="submit" data-act="next">바로 넘기기</button></form>` : ''}`;
 function loadBox(){
@@ -603,7 +603,7 @@ function viewDraft(){
     ${status}`;
   return `<div class="eyebrow">게임 준비 · 봉투 ${p.env + 1}번</div>
   <h2>${p.word ? '내 히든 워드: <span style="color:var(--brass)">' + esc(p.word) + '</span>' : '히든 워드를 고르세요'}</h2>
-  <p class="muted">${p.word ? '모두 고를 때까지 바꿀 수 있어요. 다 고르면 1라운드가 시작돼요.' : '내 출제 차례에 이 단어를 숨기고 95% 힌트를 줘야 해요. 다른 사람에게 화면을 보이지 마세요.'}</p>
+  <p class="muted">${p.word ? '모두 고를 때까지 바꿀 수 있어요. 다 고르면 1라운드가 시작되고, 정해진 순서대로 한 명씩 출제해요.' : '내 출제 차례에 이 단어를 숨기고 95% 힌트를 줘야 해요. 다른 사람에게 화면을 보이지 마세요.'}</p>
   <div class="words">${p.words.map(w => `<button data-act="word" data-w="${esc(w)}" ${w === p.word ? 'style="outline:3px solid var(--brass)"' : ''}>${esc(w)}</button>`).join('')}</div>
   ${status}`;
 }
@@ -666,16 +666,16 @@ function viewRoundEnd(){
   const deltas = Object.entries(V.deltas).map(([i, d]) => `${esc(nm(+i))} <span class="delta">+${d}</span>`).join(' · ');
   const last = V.round + 1 >= V.players.length;
   return `${roundHead()}${steps()}<p class="muted" style="margin:0">히든 워드</p><div class="reveal">${esc(V.reveal.hidden)}</div>
-  ${head}<p class="muted">이번 라운드 획득: ${deltas || '없음'}</p>
+  ${head}<p class="muted">이번 출제에서 획득: ${deltas || '없음'}</p>
   <p class="muted" style="font-size:13px">봉투 ${V.envIdx + 1}번에 있던 단어: ${V.reveal.words.map(esc).join(', ')}</p>
   ${hintChips()}${V.guesses.length ? '<h3>모든 추측</h3>' + guessTable(V.guesses) : ''}${tryHistory('출제자가 시도한 힌트 전부')}
-  ${hostOnlyNext(last ? '최종 결과로 넘어가요' : '다음 라운드로 넘어가요')}`;
+  ${hostOnlyNext(last ? '최종 결과로 넘어가요' : '다음 출제로 넘어가요')}`;
 }
 function viewFinal(){
   const ranked = V.players.map((p, i) => ({...p, i})).sort((a, b) => b.score - a.score);
   const top = ranked[0].score;
   const winners = ranked.filter(p => p.score === top).map(p => esc(p.name)).join(', ');
-  return `<div class="eyebrow">게임 종료 · ${V.players.length} 라운드</div><div class="reveal" style="font-size:clamp(34px,7vw,56px)">${winners}</div>
+  return `<div class="eyebrow">1라운드 종료 · ${V.players.length}명 모두 출제</div><div class="reveal" style="font-size:clamp(34px,7vw,56px)">${winners}</div>
   <p>${top}점으로 우승!</p>
   <div class="board" style="margin-top:14px">${ranked.map((p, k) => `<div class="${p.i === V.me ? 'me' : ''}"><span>${k + 1}. ${esc(p.name)}</span><b>${p.score}</b></div>`).join('')}</div>
   ${V.isHost ? `<form data-form="noop"><button class="go" type="submit" data-act="again">같은 멤버로 다시</button><button type="button" class="ghost" data-act="lobby">로비로 (사람 더 받기)</button></form>` : '<p class="muted" style="margin-top:14px">방장이 다음 판을 열면 이어서 할 수 있어요.</p>'}`;
@@ -690,7 +690,7 @@ function viewRail(){
   }).join('')}</div>
   ${live ? `<p class="muted" style="font-size:12px;margin-top:10px">위에서부터 출제 순서</p>` : ''}
   ${live && V.phase !== 'draft' && V.myPick && V.myPick.word && V.me !== V.setter && V.order.indexOf(V.me) > V.round
-    ? `<div class="note">내 히든 워드 <b style="color:var(--brass)">${esc(V.myPick.word)}</b> · ${V.order.indexOf(V.me) + 1}라운드에 출제</div>` : ''}
+    ? `<div class="note">내 히든 워드 <b style="color:var(--brass)">${esc(V.myPick.word)}</b> · ${V.order.indexOf(V.me) + 1}번째로 출제</div>` : ''}
   <h3>점수표</h3>${rulesTable()}
   ${netStatus ? `<div class="note">${esc(netStatus)}</div>` : ''}
   ${V.isHost ? `<button class="small ghost" data-act="askReset" style="margin-top:8px">게임 중단</button>
