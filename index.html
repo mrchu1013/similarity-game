@@ -157,9 +157,9 @@ const dot = (x, y) => { let s = 0; for (let i = 0; i < x.length; i++) s += x[i] 
 const senseText = (w, g) => `${w}: ${g.slice(0, 4).join(', ')}`;
 /* Gemini cosines all sit around 0.8–0.95, and some targets score high with everything.
    So each target's score is measured above its own baseline (mean similarity to unrelated anchor words).
-   Calibrated 2026-11-26: unrelated ≈ 0, weak link ≈ 0.05, strong hint ≥ 0.10 (배-항해 0.09, 배-선박 0.15, 기차-철도 0.13). */
+   Calibrated 2026-11-26: unrelated ≈ 0, weak link ≈ 0.05, strong hint ≥ 0.085 (발-뒤꿈치 0.081, 배-항해 0.09, 배-선박 0.15, 기차-철도 0.13). */
 const ANCHORS = ['연필', '냉장고', '구름', '양말', '피아노', '수학', '고양이', '신호등', '라디오', '계단', '치약', '우주'];
-const CUT_G = 0.10;
+const CUT_G = 0.085;
 const baseCache = new Map();
 async function baseline(t, tv){
   if (baseCache.has(t)) return baseCache.get(t);
