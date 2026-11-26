@@ -217,7 +217,7 @@ async function tryHint(h){
   h = h.trim();
   if (!h){ S.msg = '힌트 단어를 입력해 주세요.'; return render(); }
   const a = norm(h), b = norm(S.hidden);
-  if (a === b || a.includes(b) || b.includes(a)){ S.msg = '정답 단어와 같거나, 정답이 들어가거나, 정답의 일부인 힌트는 쓸 수 없어요.'; return render(); }
+  if (a === b || a.includes(b)){ S.msg = '정답 단어와 같거나 정답이 들어간 힌트는 쓸 수 없어요.'; return render(); }
   if (S.hints.some(x => norm(x.text) === a)){ S.msg = '이미 공개한 힌트예요.'; return render(); }
   busy = true; S.msg = ''; render();
   try {
@@ -362,7 +362,7 @@ function viewHintHandoff(){
 function viewHint(){
   const att = S.attempts.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
   return `${roundHead()}${steps()}<h2>${S.stage}차 힌트 찾기</h2>
-  <p>히든 워드 <b style="color:var(--brass)">${esc(S.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 정답이 들어가거나 정답의 일부인 단어는 안 돼요.</p>
+  <p>히든 워드 <b style="color:var(--brass)">${esc(S.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 정답이 들어간 단어는 안 돼요. 정답의 일부(예: 눈사람 → 눈)는 써도 돼요.</p>
   ${hintChips()}
   ${S.passHint ? `<div class="ok"><b>${esc(S.passHint.text)}</b> · ${S.passHint.score}% 통과! 이 힌트를 공개할까요?
      <div class="row" style="margin-top:10px"><button class="go" data-act="publish">이 힌트 공개</button><button class="ghost" data-act="discard">다른 힌트 찾기</button></div></div>` :
