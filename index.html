@@ -592,7 +592,7 @@ function viewHint(){
     ${V.guesses.length ? '<h3>지금까지 추측</h3>' + guessTable(V.guesses) : ''}`;
   return `${roundHead()}${steps()}<h2>${V.stage}차 힌트 찾기</h2>
   <p>히든 워드 <b style="color:var(--brass)">${esc(V.secret.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. ${THR}%를 넘으면 바로 공개되고 추측이 시작돼요. 시도하는 단어와 유사도는 모두에게 실시간으로 보여요.</p>
-  <form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어" ${V.hintBusy ? 'disabled' : ''}>
+  <form data-form="hint"><input type="text" id="hintIn" autocomplete="off" maxlength="30" placeholder="힌트 후보 단어">
   <button class="go" type="submit" ${V.hintBusy ? 'disabled' : ''}>${V.hintBusy ? '<span class="spinner"></span>계산 중' : '유사도 확인'}</button></form>
   ${msgBox()}
   ${hintChips()}${tryHistory('시도한 힌트')}
@@ -707,7 +707,7 @@ document.addEventListener('submit', e => {
     if (!name){ entryMsg = '이름을 적어 주세요.'; return render(); }
     entryMsg = '';
     startGuest(code, name);
-  } else if (f === 'hint') act({a:'hint', text:val('hintIn')});
+  } else if (f === 'hint'){ if (!(V && V.hintBusy)) act({a:'hint', text:val('hintIn')}); }
   else if (f === 'guess'){ const w = val('guessIn'); if (w.trim()){ editingGuess = false; act({a:'guess', w}); } }
   else if (btn) doAct(btn);
 });
