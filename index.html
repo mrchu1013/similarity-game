@@ -181,7 +181,7 @@ async function similarity(a, b){
 }
 
 /* ================= noun bank ================= */
-const NOUNS = [...new Set(`기차 냉장고 피아노 눈사람 도서관 치킨 비행기 선생님 시계 우산 바다 학교 병원 고양이 강아지 사과 휴대폰 자동차 자전거 축구 야구 수영장 놀이공원 생일 케이크 커피 라면 김치 떡볶이 피자 햄버거 아이스크림 초콜릿 우유 빵 김밥 소주 맥주 경찰 소방관 의사 요리사 가수 배우 군인 농부 어부 대통령 할머니 아기 친구 결혼식 크리스마스 설날 추석 여름 겨울 태풍 무지개 번개 달 태양 별 지구 우주 화산 사막 정글 산 강 섬 호수 폭포 동굴 나무 꽃 장미 해바라기 호랑이 사자 코끼리 기린 원숭이 펭귄 돌고래 상어 고래 거북이 토끼 돼지 개구리 나비 모기 거미 공룡 로봇 컴퓨터 텔레비전 카메라 안경 신발 모자 가방 지갑 반지 침대 의자 책상 소파 냉면 칫솔 비누 수건 열쇠 연필 지우개 공책 가위 풍선 선물 편지 신문 영화 음악 노래 그림 사진 게임 시험 숙제 월급 은행 시장 백화점 편의점 카페 식당 호텔 공항 지하철 택시 버스 경찰서 감옥 교회 왕 공주 마법사 유령 천사 전쟁 올림픽 월드컵 마라톤 헬스장 낚시 캠핑 여행 여권 지도 나침반 등산 스키 썰매 구름 안개 소나기 눈썰매장 군대 대학교 회사 사장님 택배 엘리베이터 계단 창문 전자레인지 세탁기 에어컨 선풍기 이불 베개 치약 화장실 목욕탕 찜질방 노래방 피시방 만화책 소설 일기 달력 생선 고기 계란 두부 된장 고추장 젓가락 숟가락 냄비 프라이팬`.split(/\s+/))];
+const NOUNS = [...new Set(`기차 냉장고 피아노 눈사람 도서관 치킨 비행기 선생님 시계 우산 바다 학교 병원 고양이 강아지 사과 휴대폰 자동차 자전거 축구 야구 수영장 놀이공원 생일 케이크 커피 라면 김치 떡볶이 피자 햄버거 아이스크림 초콜릿 우유 빵 김밥 소주 맥주 경찰 소방관 의사 요리사 가수 배우 군인 농부 어부 대통령 할머니 아기 친구 결혼식 크리스마스 설날 추석 여름 겨울 태풍 무지개 번개 달 태양 별 지구 우주 화산 사막 정글 산 강 섬 호수 폭포 동굴 나무 꽃 장미 해바라기 호랑이 사자 코끼리 기린 원숭이 펭귄 돌고래 상어 고래 거북이 토끼 돼지 개구리 나비 모기 거미 공룡 로봇 컴퓨터 텔레비전 카메라 안경 신발 모자 가방 지갑 반지 침대 의자 책상 소파 냉면 칫솔 비누 수건 열쇠 연필 지우개 공책 가위 풍선 선물 편지 신문 영화 음악 노래 그림 사진 게임 시험 숙제 월급 은행 시장 백화점 편의점 카페 식당 호텔 공항 지하철 택시 버스 경찰서 감옥 교회 왕 공주 마법사 유령 천사 전쟁 올림픽 월드컵 마라톤 헬스장 낚시 캠핑 여행 여권 지도 나침반 등산 스키 썰매 구름 안개 소나기 눈썰매장 군대 대학교 회사 사장님 택배 엘리베이터 계단 창문 전자레인지 세탁기 에어컨 선풍기 이불 베개 치약 화장실 목욕탕 찜질방 노래방 피시방 만화책 소설 일기 달력 생선 고기 계란 두부 된장 고추장 젓가락 숟가락 냄비 프라이팬 배 눈 말 밤 차 다리 김 굴 감 비 벌 병 바람 풀 못 절 쥐 줄 손 발 상 부채 가지 거리 볼 연 잔 성 기사 수도 공기 경기 정원 의사 대리 사기 전기 장 무 철 타자 고개`.split(/\s+/))];
 
 /* ================= common ================= */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -226,7 +226,7 @@ function viewFor(pid){
     players:S.players.map((p, i) => ({name:p.name, score:p.score, online:online(i)})),
     order:S.order, round:S.round, setter, envelopes:S.envelopes.map(e => ({used:e.used})), envIdx:S.envIdx,
     stage:S.stage, hints:S.hints, guesses:S.guesses, submitted:Object.keys(S.pending).map(Number),
-    tries:S.attempts.length, hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
+    attempts:S.phase === 'hint' ? S.attempts : [], hintBusy:S.hintBusy, result:S.result, deltas:S.deltas, msg:S.msgs[pid] || '',
     engine:{ready:engine.ready, pct:engine.pct, failed:engine.failed},
     myGuess:S.pending[pid] ?? null,
     secret:isSetter && !end ? {hidden:S.hidden, words:S.envIdx >= 0 ? S.envelopes[S.envIdx].words : null, attempts:S.attempts, passHint:S.passHint} : null,
@@ -552,12 +552,15 @@ function viewEnvOpen(){
   <div class="words">${(V.secret.words || []).map(w => `<button data-act="word" data-w="${esc(w)}">${esc(w)}</button>`).join('')}</div>`;
 }
 function viewHint(){
-  if (!isSetter()) return `${roundHead()}${steps()}${waitBox(nm(V.setter), `님이 ${V.stage}차 힌트를 찾는 중 · 시도 ${V.tries}번`)}
+  const attRows = list => list.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
+  if (!isSetter()) return `${roundHead()}${steps()}${waitBox(nm(V.setter), `님이 ${V.stage}차 힌트를 찾는 중${V.hintBusy ? ' · 계산 중' : ''}`)}
+    <h3>출제자가 시도한 힌트 후보 (${V.attempts.length})</h3>
+    ${V.attempts.length ? `<div class="tablebox"><table>${attRows(V.attempts)}</table></div>` : '<p class="muted">아직 시도한 단어가 없어요.</p>'}
     ${hintChips()}${V.guesses.length ? '<h3>지금까지 추측</h3>' + guessTable(V.guesses) : ''}`;
   const s = V.secret;
   const att = s.attempts.map(a => `<tr><td>${esc(a.text)}${a.score >= THR ? '<span class="badge">통과</span>' : ''}</td><td style="width:45%">${meter(a.score)}</td><td class="num">${a.score}%</td></tr>`).join('');
   return `${roundHead()}${steps()}<h2>${V.stage}차 힌트 찾기</h2>
-  <p>히든 워드 <b style="color:var(--brass)">${esc(s.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 정답이 들어간 단어는 안 돼요. 정답의 일부(예: 눈사람 → 눈)는 써도 돼요. 시도한 단어는 나만 보여요.</p>
+  <p>히든 워드 <b style="color:var(--brass)">${esc(s.hidden)}</b> 와 유사도 <b>${THR}% 이상</b>인 힌트를 찾을 때까지 시도하세요. 시도하는 단어와 유사도는 모두에게 실시간으로 보여요.</p>
   ${hintChips()}
   ${s.passHint ? `<div class="ok"><b>${esc(s.passHint.text)}</b> · ${s.passHint.score}% 통과! 이 힌트를 모두에게 공개할까요?
      <div class="row" style="margin-top:10px"><button class="go" data-act="publish">이 힌트 공개</button><button class="ghost" data-act="discard">다른 힌트 찾기</button></div></div>` :
